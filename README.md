@@ -1,2 +1,2 @@
 # watchy
-RPI information station software
+RPI information station
