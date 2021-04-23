@@ -7,6 +7,7 @@
 
 #include "led-matrix.h"
 #include "graphics.h"
+#include "utf8-internal.h"
 
 #include <getopt.h>
 #include <signal.h>
@@ -94,6 +95,18 @@ static int usage(const char *progname) {
   return 1;
 }
 
+static int displayWidth(const Font &font, const char *utf8_text, int extra_spacing) {
+    int x = 0;
+    while (*utf8_text) {
+        if (x > 0) {
+            x += extra_spacing;
+        }
+        const uint32_t cp = utf8_next_codepoint(utf8_text);
+        x += font.CharacterWidth(cp);
+    }
+    return x;
+}
+
 static bool parseColor(Color *c, const char *str) {
   return sscanf(str, "%hhu,%hhu,%hhu", &c->r, &c->g, &c->b) == 3;
 }
@@ -120,21 +133,22 @@ int main(int argc, char *argv[]) {
   Color color(255, 255, 0);
   Color bg_color(0, 0, 0);
   Color outline_color(0,0,0);
-  bool with_outline = false;
 
   const char *bdf_font_file = NULL;
   int x_orig = 0;
   int y_orig = 0;
   int letter_spacing = 0;
   int line_spacing = 0;
+  bool center = false;
 
   int opt;
-  while ((opt = getopt(argc, argv, "x:y:f:C:B:O:s:S:d:")) != -1) {
+  while ((opt = getopt(argc, argv, "x:y:f:C:B:O:s:S:d:c")) != -1) {
     switch (opt) {
     case 'x': x_orig = atoi(optarg); break;
     case 'y': y_orig = atoi(optarg); break;
     case 'f': bdf_font_file = strdup(optarg); break;
     case 's': line_spacing = atoi(optarg); break;
+    case 'c': center = true; break;
     case 'S': letter_spacing = atoi(optarg); break;
     case 'C':
       if (!parseColor(&color, optarg)) {
@@ -147,13 +161,6 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Invalid background color spec: %s\n", optarg);
         return usage(argv[0]);
       }
-      break;
-    case 'O':
-      if (!parseColor(&outline_color, optarg)) {
-        fprintf(stderr, "Invalid outline color spec: %s\n", optarg);
-        return usage(argv[0]);
-      }
-      with_outline = true;
       break;
     default:
       return usage(argv[0]);
@@ -174,11 +181,6 @@ int main(int argc, char *argv[]) {
     return 1;
   }
 
-  rgb_matrix::Font *outline_font = NULL;
-  if (with_outline) {
-    outline_font = font.CreateOutlineFont();
-  }
-
   RGBMatrix *matrix = RGBMatrix::CreateFromOptions(matrix_options, runtime_opt);
   if (matrix == NULL)
     return 1;
@@ -191,7 +193,7 @@ int main(int argc, char *argv[]) {
   if (all_extreme_colors)
     matrix->SetPWMBits(1);
 
-  const int x = x_orig;
+  int x = x_orig;
   int y = y_orig;
 
   FrameCanvas *offscreen = matrix->CreateFrameCanvas();
@@ -210,6 +212,7 @@ int main(int argc, char *argv[]) {
 
     format_lines.clear();
     format_lines.push_back("The time is");
+    format_lines.push_back("");
     int hour = tm.tm_hour;
     bool pm = hour > 11;
     if (pm) {
@@ -230,17 +233,15 @@ int main(int argc, char *argv[]) {
    
     int line_offset = 0;
     for (const std::string &line : format_lines) {
-      if (outline_font) {
-        rgb_matrix::DrawText(offscreen, *outline_font,
-                             x - 1, y + font.baseline() + line_offset,
-                             outline_color, NULL, line.c_str(),
-                             letter_spacing - 2);
-      }
-      rgb_matrix::DrawText(offscreen, font,
-                           x, y + font.baseline() + line_offset,
-                           color, NULL, line.c_str(),
-                           letter_spacing);
-      line_offset += font.height() + line_spacing;
+        if (center) {
+            int line_width = displayWidth(font, line.c_str(), letter_spacing);
+            x = (64 - line_width) / 2;
+        }
+        rgb_matrix::DrawText(offscreen, font,
+                            x, y + font.baseline() + line_offset,
+                            color, NULL, line.c_str(),
+                            letter_spacing);
+        line_offset += font.height() + line_spacing;
     }
 
     // Wait until we're ready to show it.
