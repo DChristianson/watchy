@@ -4,9 +4,6 @@
 #include <stdlib.h>
 #include <iostream>
 
-#include <fmt/args.h>
-#include <fmt/core.h>
-
 namespace watchpanel {
 
     const char * _PAGE_ = "page";
@@ -42,30 +39,9 @@ namespace watchpanel {
 
 namespace wpp = watchpanel; 
 
-wpp::DataManager::DataManager() {
-}
-
-wpp::DataManager::~DataManager() {
-}
-
-const char * wpp::DataManager::VariableFormatText(const char * formatStr) {
-    auto args = fmt::dynamic_format_arg_store<fmt::format_context>();
-    args.push_back(fmt::arg("hh", "10"));
-    args.push_back(fmt::arg("MM", "11"));
-    args.push_back(fmt::arg("city", "Seattle"));
-    args.push_back(fmt::arg("icon", "iii"));
-    args.push_back(fmt::arg("temp", "It's cold"));
-    args.push_back(fmt::arg("temp_hi", "30"));
-    args.push_back(fmt::arg("temp_low", "18"));
-    std::cerr << formatStr << std::endl;
-    fmt::vformat_to_n(std::back_inserter(buffer), 255, formatStr, args);
-    std::cerr << buffer.data() << std::endl;
-    return buffer.data();
-}
-
 wpp::WatchPage::WatchPage() {}
 
-int wpp::WatchPage::LoadPage(const char *path)
+int wpp::WatchPage::Load(const char *path)
 {
     Clear();
 
@@ -83,6 +59,9 @@ int wpp::WatchPage::LoadPage(const char *path)
     for (pugi::xml_node data_item = data.first_child(); data_item; data_item = data_item.next_sibling())
     {
         // TODO: data bindings
+        auto builtin = new BuiltinData();
+        data_list.push_back(builtin);
+        builtin->Pull(vars);
     }
 
     pugi::xml_node display = page.child(wpp::_DISPLAY_);
@@ -92,7 +71,7 @@ int wpp::WatchPage::LoadPage(const char *path)
         const char * name = graphic_item.name();
         if (strcmp(name, wpp::_TEXT_) == 0) {
             // TEXT graphic
-            const char * textPtr = data_manager.VariableFormatText(graphic_item.child_value());
+            const char * text = graphic_item.child_value();
             const rgbmatrix::Font * font = ParseFont(graphic_item.attribute(wpp::_FONT_).value());
             rgbmatrix::Color color = ParseColor(graphic_item.attribute(wpp::_COLOR_).value());
             int x = ParseInt(graphic_item.attribute(wpp::_X_).value());
@@ -100,7 +79,7 @@ int wpp::WatchPage::LoadPage(const char *path)
             int letter_spacing = ParseInt(graphic_item.attribute(wpp::_LETTER_SPACING_).value(), 1);
             int line_offset = ParseInt(graphic_item.attribute(wpp::_LINE_OFFSET_).value(), 0);
 
-            graphic = new wpp::TextGraphic(textPtr, font, color, x, y, letter_spacing, line_offset);
+            graphic = new wpp::TextGraphic(text, vars, font, color, x, y, letter_spacing, line_offset);
 
         } else if (strcmp(name, wpp::_IMAGE_) == 0) {
             // IMAGE graphic
@@ -133,6 +112,11 @@ void wpp::WatchPage::Draw(rgbmatrix::Canvas *canvas)
 }
 
 void wpp::WatchPage::Clear() {
+    for (auto d : data_list)
+    {
+        delete d;
+    }
+    data_list.clear();
     for (auto g : display_list)
     {
         delete g;
@@ -145,52 +129,3 @@ wpp::WatchPage::~WatchPage() {
     Clear();
 }
 
-wpp::Graphic::~Graphic() {}
-
-wpp::TextGraphic::TextGraphic(
-    const char * textPtr,
-    const rgbmatrix::Font * font,
-    rgbmatrix::Color color,
-    int x,
-    int y,
-    int letter_spacing,
-    int line_offset
-) : textPtr(textPtr),
-    font(font), 
-    color(color), 
-    x(x), 
-    y(y), 
-    letter_spacing(letter_spacing), 
-    line_offset(line_offset)
-{}
-
-void wpp::TextGraphic::Draw(rgbmatrix::Canvas *canvas)
-{
-    std::cout << "rgb_matrix::DrawText(offscreen, font," << x << ", " << y
-     << " + font.baseline() + " << line_offset << ", color, NULL, " 
-     <<  *textPtr << ", " << letter_spacing << ");" << std::endl;
-    std::cout << "TextGraphic" << std::endl;
-}
-
-wpp::TextGraphic::~TextGraphic() {
-}
-
-wpp::ImageGraphic::ImageGraphic() {}
-
-void wpp::ImageGraphic::Draw(rgbmatrix::Canvas *canvas)
-{
-    std::cout << "ImageGraphic" << std::endl;
-}
-
-wpp::ImageGraphic::~ImageGraphic() {
-}
-
-wpp::RectGraphic::RectGraphic() {}
-
-void wpp::RectGraphic::Draw(rgbmatrix::Canvas *canvas)
-{
-    std::cout << "RectGraphic" << std::endl;
-}
-
-wpp::RectGraphic::~RectGraphic() {
-}

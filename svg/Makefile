@@ -1,16 +1,16 @@
 CFLAGS=-Wall -O3 -g -Wextra -Wno-unused-parameter
 CXXFLAGS=$(CFLAGS) -std=c++11
-OBJECTS=svg2led.o watchpanel.o
+OBJECTS= watchpanel.o data.o strings.o graphics.o
 BINARIES=svg2led
 
 LDFLAGS+= -lm -lpthread -lpugixml -lfmt
 
 all : $(BINARIES)
 
-svg2led : svg2led.o watchpanel.o
+svg2led : svg2led.o $(OBJECTS)
 
 % : %.o 
-	$(CXX) $< -o $@ watchpanel.o $(LDFLAGS)
+	$(CXX) $< -o $@ $(OBJECTS) $(LDFLAGS)
 
 %.o : %.cc
 	$(CXX) $(CXXFLAGS) -c -o $@ $<

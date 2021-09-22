@@ -1,5 +1,11 @@
 
+#ifndef WATCHPANEL_GRAPHICS_H_
+#define WATCHPANEL_GRAPHICS_H_
+
+#include "strings.h"
+
 #include <stdint.h>
+
 
 namespace rgbmatrix {
 
@@ -14,3 +20,66 @@ namespace rgbmatrix {
     };
 
 }
+
+namespace watchpanel {
+
+    class Graphic {
+    public:
+
+        virtual ~Graphic();
+        
+        virtual void Draw(rgbmatrix::Canvas * canvas) {}
+
+    };
+
+    class TextGraphic : public Graphic {
+    private:
+
+        FormattedString text;
+        const rgbmatrix::Font * font;
+        rgbmatrix::Color color;
+        int x;
+        int y;
+        int letter_spacing;
+        int line_offset;
+
+    public:
+
+        TextGraphic(
+            const char * text,
+            const std::map<std::string, std::string> &vars,
+            const rgbmatrix::Font * font,
+            rgbmatrix::Color color,
+            int x,
+            int y,
+            int letter_spacing,
+            int line_offset);
+        ~TextGraphic();
+
+        void Draw(rgbmatrix::Canvas * canvas);
+
+    };
+
+    class RectGraphic: public Graphic {
+    public:
+
+        RectGraphic();
+        ~RectGraphic();
+
+        void Draw(rgbmatrix::Canvas * canvas);
+
+    };
+
+    class ImageGraphic : public Graphic {
+    public:
+
+        ImageGraphic();
+        ~ImageGraphic();
+
+        void Draw(rgbmatrix::Canvas * canvas);
+
+    };
+
+}
+
+#endif // WATCHPANEL_GRAPHICS_H_
