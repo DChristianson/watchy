@@ -35,7 +35,7 @@ namespace watchpanel {
     class TextGraphic : public Graphic {
     private:
 
-        FormattedString text;
+        std::string value;
         const rgbmatrix::Font * font;
         rgbmatrix::Color color;
         int x;
@@ -47,7 +47,6 @@ namespace watchpanel {
 
         TextGraphic(
             const char * text,
-            const std::map<std::string, std::string> &vars,
             const rgbmatrix::Font * font,
             rgbmatrix::Color color,
             int x,
@@ -55,6 +54,8 @@ namespace watchpanel {
             int letter_spacing,
             int line_offset);
         ~TextGraphic();
+
+        void SetValue(const char *str) { value = str; }
 
         void Draw(rgbmatrix::Canvas * canvas);
 

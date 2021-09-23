@@ -8,14 +8,13 @@ wpp::Graphic::~Graphic() {}
 
 wpp::TextGraphic::TextGraphic(
     const char * text,
-    const std::map<std::string, std::string> & vars,
     const rgbmatrix::Font * font,
     rgbmatrix::Color color,
     int x,
     int y,
     int letter_spacing,
     int line_offset
-) : text(text, vars),
+) : value(text),
     font(font), 
     color(color), 
     x(x), 
@@ -28,7 +27,7 @@ void wpp::TextGraphic::Draw(rgbmatrix::Canvas *canvas)
 {
     std::cout << "rgb_matrix::DrawText(offscreen, font," << x << ", " << y
      << " + font.baseline() + " << line_offset << ", color, NULL, " 
-     <<  text.Value() << ", " << letter_spacing << ");" << std::endl;
+     <<  value << ", " << letter_spacing << ");" << std::endl;
     std::cout << "TextGraphic" << std::endl;
 }
 

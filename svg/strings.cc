@@ -3,8 +3,7 @@
 
 namespace wpp = watchpanel;
 
-wpp::FormattedString::FormattedString(const char *templateStr, const std::map<std::string, std::string> &vars)
-    : vars(vars)
+wpp::FormattedString::FormattedString(const char *templateStr)
 {
     const int size = strlen(templateStr);
     formatData.reserve(size);
@@ -34,13 +33,11 @@ wpp::FormattedString::FormattedString(const char *templateStr, const std::map<st
         formatData.push_back(c);
     }
     formatData.push_back(0);
-
-    Update();
 }
 
 wpp::FormattedString::~FormattedString() {}
 
-void wpp::FormattedString::Update() {
+void wpp::FormattedString::Format(const std::map<std::string, std::string> &vars, std::string &value) {
     int i = 0;
     value.clear();
     const char * data = formatData.data();
@@ -61,6 +58,13 @@ void wpp::FormattedString::Update() {
     }
 }
 
-const char * wpp::FormattedString::Value() {
-    return value.data();
+bool wpp::FormattedString::IsTemplatized(const char *value) {
+    char c;
+    do {
+        c = *value;
+        if ('{' == c) return true;
+        value += 1;
+    } while (c != 0);
+    return false;
 }
+

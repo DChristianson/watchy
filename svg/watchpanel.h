@@ -11,8 +11,6 @@ namespace watchpanel {
     class WatchPage {
     private:
     
-        std::map<std::string, std::string> vars;
-
         std::vector<std::string> errors;
 
         std::vector<DataImport *> data_list;

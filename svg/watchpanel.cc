@@ -53,6 +53,8 @@ int wpp::WatchPage::Load(const char *path)
         return -1;
     }
 
+    std::map<std::string, std::string> vars;
+
     pugi::xml_node page = doc.child(wpp::_PAGE_);
 
     pugi::xml_node data = page.child(wpp::_DATA_);
@@ -79,7 +81,16 @@ int wpp::WatchPage::Load(const char *path)
             int letter_spacing = ParseInt(graphic_item.attribute(wpp::_LETTER_SPACING_).value(), 1);
             int line_offset = ParseInt(graphic_item.attribute(wpp::_LINE_OFFSET_).value(), 0);
 
-            graphic = new wpp::TextGraphic(text, vars, font, color, x, y, letter_spacing, line_offset);
+            const char *value;
+            if (wpp::FormattedString::IsTemplatized(text)) {
+                wpp::FormattedString formatter(text);
+                std::string buffer;
+                formatter.Format(vars, buffer);
+                value = buffer.c_str();
+            } else {
+                value = text;
+            }
+            graphic = new wpp::TextGraphic(value, font, color, x, y, letter_spacing, line_offset);
 
         } else if (strcmp(name, wpp::_IMAGE_) == 0) {
             // IMAGE graphic

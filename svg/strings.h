@@ -12,18 +12,17 @@ namespace watchpanel {
     class FormattedString {
     private:
 
-        const std::map<std::string, std::string> &vars;
         std::vector<char> formatData;
         std::vector< std::pair<int, int> > vranges;
-        std::string value;
     
     public:
 
-        FormattedString(const char *templateStr, const std::map<std::string, std::string> &vars);
+        FormattedString(const char *templateStr);
         ~FormattedString();
 
-        void Update();
-        const char *Value();
+        void Format(const std::map<std::string, std::string> &vars, std::string &value);
+
+        static bool IsTemplatized(const char *text);
 
     };
 
