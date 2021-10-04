@@ -3,8 +3,9 @@
 
 #include "graphics.h"
 #include "data.h"
+#include "update.h"
+
 #include <vector>
-#include <map>
 
 namespace watchpanel {
 
@@ -14,7 +15,7 @@ namespace watchpanel {
         std::vector<std::string> errors;
 
         std::vector<DataImport *> data_list;
-
+        std::vector<Updateable *> update_list;
         std::vector<Graphic *> display_list;
 
     public:

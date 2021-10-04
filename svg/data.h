@@ -29,10 +29,13 @@ namespace watchpanel {
     class RemoteFetchData : public DataImport {
     private:
         
+        FormattedString src;
+
+        void Clear();
 
     public:
     
-        RemoteFetchData();
+        RemoteFetchData(const char *src);
         ~RemoteFetchData();
     
         void Pull(std::map<std::string, std::string> &vars);

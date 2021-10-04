@@ -20,6 +20,8 @@ namespace watchpanel {
     const char * _COLOR_ = "color";
     const char * _LETTER_SPACING_ = "letter-spacing";
     const char * _LINE_OFFSET_ = "line-offset";
+    const char * _INCLUDE_ = "include";
+    const char * _SRC_ = "src";
 
     const rgbmatrix::Font *ParseFont(const char * str) {
         return NULL; // BUGBUG todo
@@ -53,19 +55,29 @@ int wpp::WatchPage::Load(const char *path)
         return -1;
     }
 
-    std::map<std::string, std::string> vars;
-
     pugi::xml_node page = doc.child(wpp::_PAGE_);
 
+    // builtin data bindings
+    auto builtin = new BuiltinData();
+    data_list.push_back(builtin);
+
+    // data includes
     pugi::xml_node data = page.child(wpp::_DATA_);
     for (pugi::xml_node data_item = data.first_child(); data_item; data_item = data_item.next_sibling())
     {
-        // TODO: data bindings
-        auto builtin = new BuiltinData();
-        data_list.push_back(builtin);
-        builtin->Pull(vars);
+        wpp::DataImport * import = NULL;
+        const char * name = data_item.name();
+        std::cout << name << std::endl;
+        if (strcmp(name, wpp::_INCLUDE_) == 0) {
+            const char * src = data_item.attribute(wpp::_SRC_).value();
+            import = new wpp::RemoteFetchData(src);
+        }
+        if (NULL != import) {
+            data_list.push_back(import);
+        }
     }
 
+    // display list
     pugi::xml_node display = page.child(wpp::_DISPLAY_);
     for (pugi::xml_node graphic_item = display.first_child(); graphic_item; graphic_item = graphic_item.next_sibling())
     {
@@ -81,16 +93,19 @@ int wpp::WatchPage::Load(const char *path)
             int letter_spacing = ParseInt(graphic_item.attribute(wpp::_LETTER_SPACING_).value(), 1);
             int line_offset = ParseInt(graphic_item.attribute(wpp::_LINE_OFFSET_).value(), 0);
 
+            const bool is_dynamic_text = wpp::FormattedString::IsTemplatized(text);
             const char *value;
-            if (wpp::FormattedString::IsTemplatized(text)) {
-                wpp::FormattedString formatter(text);
-                std::string buffer;
-                formatter.Format(vars, buffer);
-                value = buffer.c_str();
+            if (is_dynamic_text) {
+                value = "";
             } else {
                 value = text;
             }
-            graphic = new wpp::TextGraphic(value, font, color, x, y, letter_spacing, line_offset);
+
+            graphic = new wpp::TextGraphic(text, font, color, x, y, letter_spacing, line_offset);
+
+            if (is_dynamic_text) {
+                update_list.push_back( new wpp::UpdateText( text, *(TextGraphic *)graphic ) );
+            }
 
         } else if (strcmp(name, wpp::_IMAGE_) == 0) {
             // IMAGE graphic
@@ -109,9 +124,27 @@ int wpp::WatchPage::Load(const char *path)
             continue;
 
         }
-        display_list.push_back(graphic);
+        if (NULL != graphic) {
+            display_list.push_back(graphic);
+        }
     }
     return 0;
+}
+
+void wpp::WatchPage::Update() {
+
+    std::map<std::string, std::string> vars;
+
+    for (auto d : data_list) {
+        std::cout << "pulling data" << std::endl;
+        d->Pull(vars);
+    }
+
+    for (auto u : update_list) {
+        std::cout << "updating graphic" << std::endl;
+        u->Update(vars);
+    }
+
 }
 
 void wpp::WatchPage::Draw(rgbmatrix::Canvas *canvas)
@@ -128,11 +161,19 @@ void wpp::WatchPage::Clear() {
         delete d;
     }
     data_list.clear();
+    
+    for (auto u : update_list)
+    {
+        delete u;
+    }
+    update_list.clear();
+
     for (auto g : display_list)
     {
         delete g;
     }
     display_list.clear();
+    
     errors.clear();
 }
 

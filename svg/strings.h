@@ -8,7 +8,6 @@
 
 namespace watchpanel {
 
-    
     class FormattedString {
     private:
 

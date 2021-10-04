@@ -6,7 +6,6 @@
 
 #include <stdint.h>
 
-
 namespace rgbmatrix {
 
     class Canvas;
