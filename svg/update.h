@@ -2,7 +2,8 @@
 #define WATCHPANEL_UPDATE_H_
 
 #include "strings.h"
-#include "graphics.h"
+
+#include <functional>
 
 namespace watchpanel {
 
@@ -11,22 +12,22 @@ namespace watchpanel {
 
         virtual ~Updateable();
         
-        virtual void Update(const std::map<std::string, std::string> &vars) {}
+        virtual void Update(const Model &lookup) {}
 
     };
 
-    class UpdateText : public Updateable {
+    class UpdateFormattedString : public Updateable {
     private:
 
         FormattedString formatter;
-        TextGraphic &graphic;
+        std::function<void(const char *)> setter;
 
     public:
 
-        UpdateText(const char * text, TextGraphic &graphic);
-        ~UpdateText();
+        UpdateFormattedString(const char *text, std::function<void(const char *)> setter);
+        ~UpdateFormattedString();
     
-        void Update(const std::map<std::string, std::string> &vars);
+        void Update(const Model &lookup);
 
     };
 

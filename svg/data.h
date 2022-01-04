@@ -2,43 +2,60 @@
 #define WATCHPANEL_DATA_H_
 
 #include "strings.h"
-
-#include <map>
+#include "update.h"
+#include "model.h"
+#include "rapidjson/document.h"
 
 namespace watchpanel {
 
     class DataImport {
+    private:
+    
+        std::string name;
+        std::vector<Updateable *> updateList;
+
     public:
 
+        DataImport(const char *name);
         virtual ~DataImport();
         
-        virtual void Pull(std::map<std::string, std::string> &vars);
+        virtual void Update(const Model &model);
+
+        virtual void Pull(const Model &model, rapidjson::Document &out);
+
+        void AddUpdate(Updateable *update);
+
+        const char *GetName() { return name.c_str(); }
 
     };
 
-    class BuiltinData : public DataImport {
+    class ConfigData : public DataImport {
+    private:
+
+        std::string path;
+    
     public:
 
-        BuiltinData();
-        ~BuiltinData();
+        ConfigData(const char *packageName, const char *path);
+        ~ConfigData();
     
-        void Pull(std::map<std::string, std::string> &vars);
+        void Pull(const Model &model, rapidjson::Document &out);
 
     };
 
-    class RemoteFetchData : public DataImport {
+    class FeedData : public DataImport {
     private:
         
-        FormattedString src;
-
-        void Clear();
+        std::string href;
 
     public:
     
-        RemoteFetchData(const char *src);
-        ~RemoteFetchData();
+        FeedData(const char *name, const char *href);
+        ~FeedData();
     
-        void Pull(std::map<std::string, std::string> &vars);
+        void SetHRef(const char *href);
+        
+        void Pull(const Model &model, rapidjson::Document &out);
 
     };
 

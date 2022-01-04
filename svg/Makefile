@@ -1,6 +1,6 @@
 CFLAGS=-Wall -O3 -g -Wextra -Wno-unused-parameter
 CXXFLAGS=$(CFLAGS) -std=c++11
-OBJECTS= watchpanel.o data.o strings.o graphics.o update.o hamper.o
+OBJECTS= model.o watchpanel.o data.o timedata.o strings.o graphics.o update.o hamper.o svg.o
 BINARIES=svg2led
 
 LDFLAGS+= -lm -lpthread -lpugixml -lfmt -lcurl

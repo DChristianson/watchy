@@ -3,8 +3,9 @@
 
 #include <stdlib.h>
 #include <string>
-#include <map>
 #include <vector>
+
+#include "model.h"
 
 namespace watchpanel {
 
@@ -19,7 +20,7 @@ namespace watchpanel {
         FormattedString(const char *templateStr);
         ~FormattedString();
 
-        void Format(const std::map<std::string, std::string> &vars, std::string &value);
+        void Format(const Model &lookup, std::string &result);
 
         static bool IsTemplatized(const char *text);
 

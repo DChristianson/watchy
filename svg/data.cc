@@ -1,50 +1,65 @@
 #include "data.h"
 
 #include "hamper.h"
+#include "rapidjson/pointer.h"
+#include "rapidjson/stringbuffer.h"
+#include "rapidjson/filereadstream.h"
 
 #include <iostream>
+#include <ctime>
 
 namespace wpp = watchpanel; 
 
-wpp::DataImport::~DataImport() {}
+wpp::DataImport::DataImport(const char *name) : name(name) {}
 
-void wpp::DataImport::Pull(std::map<std::string, std::string> &vars) {}
-
-wpp::BuiltinData::BuiltinData() {}
-
-wpp::BuiltinData::~BuiltinData() {}
-
-void wpp::BuiltinData::Pull(std::map<std::string, std::string> &vars) {
-    vars["config.openweather.city"] = "Seattle";
-    vars["config.openweather.state_code"] = "WA";
-    vars["config.openweather.country_code"] = "US";
-    vars["config.openweather.appid"] = "<add here>";
+wpp::DataImport::~DataImport() {
+    for (auto u : updateList)
+    {
+        delete u;
+    }
+    updateList.clear();
 }
 
-wpp::RemoteFetchData::RemoteFetchData(const char * src) : src(src) {}
-
-wpp::RemoteFetchData::~RemoteFetchData() {
-    Clear();
+void wpp::DataImport::AddUpdate(Updateable *update) {
+    updateList.push_back(update);
 }
 
-void wpp::RemoteFetchData::Clear() {}
+void wpp::DataImport::Update(const Model &model) {
+    for (auto u : updateList)
+    {
+        u->Update(model);
+    }
+}
 
-void wpp::RemoteFetchData::Pull(std::map<std::string, std::string> &vars) {
-    Clear();
+void wpp::DataImport::Pull(const Model &model, rapidjson::Document &out) {}
 
-    std::string url;
-    src.Format(vars, url);
-    
-    std::cout << url << std::endl;
+wpp::ConfigData::ConfigData(const char *name, const char *path) : DataImport(name), path(path) {}
 
+wpp::ConfigData::~ConfigData() {}
+
+void wpp::ConfigData::Pull(const Model &model, rapidjson::Document &out) {
+    // TODO: cache everything
+    std::cout << "Loading " << path.c_str() << std::endl;
+    auto pagefile = fopen(path.c_str(), "rb");
+    char readBuffer[65536];
+    rapidjson::FileReadStream is(pagefile, readBuffer, sizeof(readBuffer));
+    out.ParseStream(is);
+    fclose(pagefile);
+}
+
+wpp::FeedData::FeedData(const char *name, const char *href) : DataImport(name), href(href) {}
+
+wpp::FeedData::~FeedData() {}
+
+void wpp::FeedData::SetHRef(const char *value) {
+    href = value;
+}
+
+void wpp::FeedData::Pull(const Model &model, rapidjson::Document &out) {
     // do fetch
-    rapidjson::Document document;
-    int res = hamper::fetch_url(url.c_str(), document, "tmp.cache.json");
+    std::cout << "Fetching " << href.c_str() << std::endl;
+    int res = hamper::fetch_url(href.c_str(), out, "tmp.cache.json");
     if (0 != res) {
         // TODO: error
-    }
-    
-    for ( auto& m : document.GetObject() ) {
-        std::cout << m.name.GetString() << std::endl;
     }
 }

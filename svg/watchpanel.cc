@@ -1,5 +1,6 @@
 #include "watchpanel.h"
 #include "pugixml.hpp"
+#include "timedata.h"
 
 #include <stdlib.h>
 #include <iostream>
@@ -15,33 +16,26 @@ namespace watchpanel {
     const char * _FONT_ = "font";
     const char * _X_ = "x";
     const char * _Y_ = "y";
-    const char * _WIDTH_ = "w";
-    const char * _HEIGHT_ = "h";
+    const char * _FILL_ = "fill";
+    const char * _STROKE_ = "stroke";
+    const char * _WIDTH_ = "width";
+    const char * _HEIGHT_ = "height";
     const char * _COLOR_ = "color";
     const char * _LETTER_SPACING_ = "letter-spacing";
     const char * _LINE_OFFSET_ = "line-offset";
-    const char * _INCLUDE_ = "include";
-    const char * _SRC_ = "src";
-
-    const rgbmatrix::Font *ParseFont(const char * str) {
-        return NULL; // BUGBUG todo
-    }
+    const char * _FEED_ = "feed";
+    const char * _NAME_ = "name";
+    const char * _HREF_ = "href";
 
     int ParseInt(const char * str, int defaultValue = 0) {
         return atoi(str);
-    }
-
-    rgbmatrix::Color ParseColor(const char * str, rgbmatrix::Color defaultValue = rgbmatrix::Color(255, 255, 255)) {
-        rgbmatrix::Color c = defaultValue;
-        // BUGBUG todo
-        return c;
     }
 
 }
 
 namespace wpp = watchpanel; 
 
-wpp::WatchPage::WatchPage() {}
+wpp::WatchPage::WatchPage(Canvas *canvas) : canvas(canvas) {}
 
 int wpp::WatchPage::Load(const char *path)
 {
@@ -55,65 +49,98 @@ int wpp::WatchPage::Load(const char *path)
         return -1;
     }
 
-    pugi::xml_node page = doc.child(wpp::_PAGE_);
+    pugi::xml_node page = doc.child(_PAGE_);
 
     // builtin data bindings
-    auto builtin = new BuiltinData();
-    data_list.push_back(builtin);
+    auto timeData = new TimeData();
+    dataList.push_back(timeData);
+    auto configData = new ConfigData("config", "config.json");
+    dataList.push_back(configData);
 
     // data includes
-    pugi::xml_node data = page.child(wpp::_DATA_);
+    pugi::xml_node data = page.child(_DATA_);
     for (pugi::xml_node data_item = data.first_child(); data_item; data_item = data_item.next_sibling())
     {
-        wpp::DataImport * import = NULL;
+        DataImport * import = NULL;
         const char * name = data_item.name();
-        std::cout << name << std::endl;
-        if (strcmp(name, wpp::_INCLUDE_) == 0) {
-            const char * src = data_item.attribute(wpp::_SRC_).value();
-            import = new wpp::RemoteFetchData(src);
+        if (strcmp(name, _FEED_) == 0) {
+            const char *feedName = data_item.attribute(_NAME_).value();
+            const char *href = data_item.attribute(_HREF_).value();
+            import = new FeedData(feedName, href);
+            if (FormattedString::IsTemplatized(href)) {
+                import->AddUpdate(
+                    new UpdateFormattedString(
+                        href, 
+                        [import] (const char* v) { ((FeedData *)import)->SetHRef(v); }
+                    )
+                );
+            }
         }
         if (NULL != import) {
-            data_list.push_back(import);
+            dataList.push_back(import);
         }
     }
 
     // display list
-    pugi::xml_node display = page.child(wpp::_DISPLAY_);
+    pugi::xml_node display = page.child(_DISPLAY_);
     for (pugi::xml_node graphic_item = display.first_child(); graphic_item; graphic_item = graphic_item.next_sibling())
     {
-        wpp::Graphic * graphic = NULL;
+        Graphic * graphic = NULL;
         const char * name = graphic_item.name();
-        if (strcmp(name, wpp::_TEXT_) == 0) {
+        if (strcmp(name, _TEXT_) == 0) {
             // TEXT graphic
-            const char * text = graphic_item.child_value();
-            const rgbmatrix::Font * font = ParseFont(graphic_item.attribute(wpp::_FONT_).value());
-            rgbmatrix::Color color = ParseColor(graphic_item.attribute(wpp::_COLOR_).value());
-            int x = ParseInt(graphic_item.attribute(wpp::_X_).value());
-            int y = ParseInt(graphic_item.attribute(wpp::_Y_).value());
-            int letter_spacing = ParseInt(graphic_item.attribute(wpp::_LETTER_SPACING_).value(), 1);
-            int line_offset = ParseInt(graphic_item.attribute(wpp::_LINE_OFFSET_).value(), 0);
+            const char * fontName = graphic_item.attribute(_FONT_).value();
+            const char * colorName = graphic_item.attribute(_COLOR_).value();
+            Color color = Color::Parse(colorName);
+            int x = ParseInt(graphic_item.attribute(_X_).value());
+            int y = ParseInt(graphic_item.attribute(_Y_).value());
+            int letter_spacing = ParseInt(graphic_item.attribute(_LETTER_SPACING_).value(), 1);
+            int line_offset = ParseInt(graphic_item.attribute(_LINE_OFFSET_).value(), 0);
 
-            const bool is_dynamic_text = wpp::FormattedString::IsTemplatized(text);
-            const char *value;
-            if (is_dynamic_text) {
-                value = "";
+            graphic = new TextGraphic(canvas, fontName, color, x, y, letter_spacing, line_offset);
+
+            pugi::xml_node span = graphic_item.child("tspan");
+            if (span) {
+                while (span) {
+                    const char * text = span.child_value();
+                    LoadText(text, (TextGraphic *)graphic);
+                    span = span.next_sibling("tspan");
+                }
             } else {
-                value = text;
+                const char * text = graphic_item.child_value();
+                LoadText(text, (TextGraphic *)graphic);
+
             }
 
-            graphic = new wpp::TextGraphic(text, font, color, x, y, letter_spacing, line_offset);
-
-            if (is_dynamic_text) {
-                update_list.push_back( new wpp::UpdateText( text, *(TextGraphic *)graphic ) );
-            }
-
-        } else if (strcmp(name, wpp::_IMAGE_) == 0) {
+        } else if (strcmp(name, _IMAGE_) == 0) {
             // IMAGE graphic
-            graphic = new wpp::ImageGraphic();
+            int x = ParseInt(graphic_item.attribute(_X_).value());
+            int y = ParseInt(graphic_item.attribute(_Y_).value());
+            int width = ParseInt(graphic_item.attribute(_WIDTH_).value());
+            int height = ParseInt(graphic_item.attribute(_HEIGHT_).value());
+            const char * href = graphic_item.attribute(_HREF_).value();
+            graphic = new ImageGraphic(canvas, x, y, width, height, href);
+            if (FormattedString::IsTemplatized(href)) {
+                updateList.push_back(
+                    new UpdateFormattedString(
+                        href, 
+                        [graphic] (const char* v) { ((ImageGraphic *)graphic)->SetHRef(v); }
+                    )
+                );
+            }
 
-        } else if (strcmp(name, wpp::_RECT_) == 0) {
+        } else if (strcmp(name, _RECT_) == 0) {
             // RECT graphic
-            graphic = new wpp::RectGraphic();
+            int x = ParseInt(graphic_item.attribute(_X_).value());
+            int y = ParseInt(graphic_item.attribute(_Y_).value());
+            int width = ParseInt(graphic_item.attribute(_WIDTH_).value());
+            int height = ParseInt(graphic_item.attribute(_HEIGHT_).value());
+            const char * fillName = graphic_item.attribute(_FILL_).value();
+            Color fill = Color::Parse(fillName);
+            const char * strokeName = graphic_item.attribute(_STROKE_).value();
+            Color stroke = Color::Parse(strokeName);
+
+            graphic = new RectGraphic(canvas, x, y, width, height, fill, stroke);
 
         } else {
             // UNKNOWN graphic
@@ -125,54 +152,67 @@ int wpp::WatchPage::Load(const char *path)
 
         }
         if (NULL != graphic) {
-            display_list.push_back(graphic);
+            displayList.push_back(graphic);
         }
     }
     return 0;
 }
 
-void wpp::WatchPage::Update() {
+void wpp::WatchPage::LoadText(const char *text, TextGraphic *textGraphic) {
+    TextSpan *span = &(textGraphic->AppendText(text));
 
-    std::map<std::string, std::string> vars;
-
-    for (auto d : data_list) {
-        std::cout << "pulling data" << std::endl;
-        d->Pull(vars);
-    }
-
-    for (auto u : update_list) {
-        std::cout << "updating graphic" << std::endl;
-        u->Update(vars);
+    if (FormattedString::IsTemplatized(text)) {
+        updateList.push_back(new UpdateFormattedString(text, [span] (const char* v) { span->text = v; }));
     }
 
 }
 
-void wpp::WatchPage::Draw(rgbmatrix::Canvas *canvas)
+void wpp::WatchPage::Update() {
+
+    rapidjson::Document root(rapidjson::kObjectType);
+    auto model = DocumentModel(root);
+    for (auto d : dataList) {
+        d->Update(model);
+        rapidjson::Document out(rapidjson::kObjectType);
+        d->Pull(model, out);
+        rapidjson::Value subtree(rapidjson::kObjectType);
+        subtree.CopyFrom(out, root.GetAllocator());
+        root.AddMember(rapidjson::StringRef(d->GetName()), subtree, root.GetAllocator());
+    }
+
+    for (auto u : updateList) {
+        u->Update(model);
+    }
+
+}
+
+void wpp::WatchPage::Draw()
 {
-    for (auto g : display_list)
+    for (auto g : displayList)
     {
-        g->Draw(canvas);
+        std::cout << "drawing graphic" << std::endl;
+        g->Draw();
     }
 }
 
 void wpp::WatchPage::Clear() {
-    for (auto d : data_list)
+    for (auto d : dataList)
     {
         delete d;
     }
-    data_list.clear();
+    dataList.clear();
     
-    for (auto u : update_list)
+    for (auto u : updateList)
     {
         delete u;
     }
-    update_list.clear();
+    updateList.clear();
 
-    for (auto g : display_list)
+    for (auto g : displayList)
     {
         delete g;
     }
-    display_list.clear();
+    displayList.clear();
     
     errors.clear();
 }

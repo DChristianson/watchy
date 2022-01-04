@@ -1,5 +1,4 @@
 #include "strings.h"
-#include <iostream>
 
 namespace wpp = watchpanel;
 
@@ -37,19 +36,18 @@ wpp::FormattedString::FormattedString(const char *templateStr)
 
 wpp::FormattedString::~FormattedString() {}
 
-void wpp::FormattedString::Format(const std::map<std::string, std::string> &vars, std::string &value) {
+void wpp::FormattedString::Format(const Model &lookup, std::string &value) {
     int i = 0;
     value.clear();
     const char * data = formatData.data();
+    std::string search;
     for (auto vrange : vranges) {
         if (vrange.first > i) {
             value.append(data + i);
         }
         const char * varName = data + vrange.first;
-        auto search = vars.find(varName);
-        if (search != vars.end()) {
-            std::cout << varName << std::endl;
-            value.append(search->second);
+        if (lookup.Find(varName, search)) {
+            value.append(search);
         }
         i = vrange.second;
     }
