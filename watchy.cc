@@ -1,6 +1,5 @@
 // -*- mode: c++; c-basic-offset: 2; indent-tabs-mode: nil; -*-
-// Example of a clock. This is very similar to the text-example,
-// except that it shows the time :)
+// Example of a wordclock
 //
 // This code is public domain
 // (but note, that the led-matrix library this depends on is GPL v2)
@@ -19,6 +18,14 @@
 
 #include <vector>
 #include <string>
+
+#ifndef TIMER_ABSTIME
+  #define TIMER_ABSTIME 0
+  int clock_nanosleep( clockid_t clock_id,
+                     int flags,
+                     const struct timespec * rqtp,
+                     struct timespec * rmtp );
+#endif
 
 using namespace rgb_matrix;
 
