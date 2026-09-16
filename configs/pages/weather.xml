@@ -1,0 +1,13 @@
+<page>
+    <data>
+        <feed name="weather" href="https://api.openweathermap.org/data/2.5/weather?q={/config/openweather/city},{/config/openweather/state_code},{/config/openweather/country_code}&units={/config/openweather/units}&appid={/secrets/openweather_appid}"/>
+    </data>
+    <display>
+        <text x="0" y="0" font="tom-thumb">{/weather/main/temp}</text>
+        <image x="30" y="10" width="20" height="20" href="https://openweathermap.org/img/wn/{/weather/weather/0/icon}.png"/>
+        <text x="0" y="40" font="tom-thumb">
+            <tspan>{/time/hh}:{/time/MM}</tspan>
+            <tspan>High: {/weather/main/temp_max}, Low: {/weather/main/temp_min}</tspan>
+        </text>
+    </display>
+</page>

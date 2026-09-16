@@ -1,0 +1,11 @@
+<page>
+    <display>
+        <text x="10" y="10" font="tom-thumb">
+            <tspan>The time is</tspan>
+            <tspan></tspan>
+            <tspan>{/time/whour}</tspan>
+            <tspan>{/time/wtens}</tspan>
+            <tspan>{/time/wmins}</tspan>
+        </text>
+    </display>
+</page>

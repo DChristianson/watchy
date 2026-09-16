@@ -1,0 +1,8 @@
+{
+    "openweather": {
+        "city": "Seattle",
+        "state_code": "WA",
+        "country_code": "US",
+        "units": "imperial"
+    }
+}

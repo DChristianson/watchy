@@ -33,3 +33,6 @@
 
 # Secrets
 secrets.json
+
+# CMake build output
+/build/

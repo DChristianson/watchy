@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64">
+	<text x="0" y="0">
+		<tspan x="0" dy="1em" />
+	</text>
+	<image x="30" y="10" width="20" height="20" href="https://openweathermap.org/img/wn/.png" />
+	<text x="0" y="40">
+		<tspan x="0" dy="1em">12:30</tspan>
+		<tspan x="0" dy="1em">High: , Low: </tspan>
+	</text>
+</svg>
