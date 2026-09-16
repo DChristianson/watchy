@@ -43,7 +43,7 @@ std::map<std::string, wpp::Color> ColorKeywords = {
     {"aqua", ColorAqua},
 };
 
-void wpp::Color::Format(std::string &out) {
+void wpp::Color::Format(std::string &out) const {
     char buf[8];
     std::snprintf(buf, sizeof(buf), "#%02x%02x%02x", r, g, b);
     out = buf;

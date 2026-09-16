@@ -1,10 +1,12 @@
 #include "svg_canvas.h"
-    
+#include "watchpanel/bdf_font.h"
+
 #include <iostream>
 
-namespace wpp = watchpanel; 
+namespace wpp = watchpanel;
 
-wpp::SvgCanvas::SvgCanvas(int width, int height) : width(width), height(height) {
+wpp::SvgCanvas::SvgCanvas(int width, int height, int pixelScale, const std::string &fontPath)
+    : width(width), height(height), pixelScale(pixelScale), fontPath(fontPath) {
     Reset();
 }
 
@@ -13,13 +15,43 @@ wpp::SvgCanvas::~SvgCanvas() {}
 void wpp::SvgCanvas::Reset() {
     root = doc.append_child("svg");
     root.append_attribute("xmlns").set_value("http://www.w3.org/2000/svg");
-    root.append_attribute("width").set_value(width);
-    root.append_attribute("height").set_value(height);
+    root.append_attribute("width").set_value(width * pixelScale);
+    root.append_attribute("height").set_value(height * pixelScale);
+    root.append_attribute("shape-rendering").set_value("crispEdges");
+
+    // Everything is drawn in native canvas-pixel coordinates into this
+    // group, then scaled up as a whole so the frame renders as chunky,
+    // crisp pixels instead of tiny native-resolution squares.
+    scene = root.append_child("g");
+    std::string transform = "scale(" + std::to_string(pixelScale) + ")";
+    scene.append_attribute("transform").set_value(transform.c_str());
 }
 
 void wpp::SvgCanvas::Clear() {
     doc.reset();
     Reset();
+}
+
+void wpp::SvgCanvas::DrawGlyph(unsigned char ch, const Color &color, int x, int y) {
+    if (fontPath.empty()) return;
+    const BdfFont &font = BdfFont::Load(fontPath);
+    const BdfGlyph *glyph = font.Find(static_cast<int>(ch));
+    if (!glyph) return;
+
+    std::string colorHex;
+    color.Format(colorHex);
+
+    for (int gy = 0; gy < glyph->height; ++gy) {
+        for (int gx = 0; gx < glyph->width; ++gx) {
+            if (!glyph->GetBit(gx, gy)) continue;
+            pugi::xml_node rect = scene.append_child("rect");
+            rect.append_attribute("x").set_value(x + gx);
+            rect.append_attribute("y").set_value(y + gy);
+            rect.append_attribute("width").set_value(1);
+            rect.append_attribute("height").set_value(1);
+            rect.append_attribute("fill").set_value(colorHex.c_str());
+        }
+    }
 }
 
 void wpp::SvgCanvas::DrawText(
@@ -31,21 +63,20 @@ void wpp::SvgCanvas::DrawText(
     int letterSpacing,
     int lineOffset)
 {
-    pugi::xml_node text = root.append_child("text");
-    text.append_attribute("x").set_value(x);
-    text.append_attribute("y").set_value(y);
-    std::string colorHex;
-    color.Format(colorHex);
-    text.append_attribute("fill").set_value(colorHex.c_str());
-    // TODO: fonts
-    // TODO: line offset compute
-    const char *lineOffsetEms = "1em";
+    (void)fontName;
+    (void)lineOffset;
+    int cursorX = x;
     while (textSpan) {
-        pugi::xml_node tspan = text.append_child("tspan");
-        tspan.append_attribute("x").set_value(0);
-        tspan.append_attribute("dy").set_value(lineOffsetEms);
-        tspan.append_child(pugi::node_pcdata).set_value(textSpan->text.c_str());
+        const std::string &s = textSpan->text;
+        for (size_t i = 0; i < s.size(); ++i) {
+            const unsigned char ch = static_cast<unsigned char>(s[i]);
+            DrawGlyph(ch, color, cursorX, y);
+            cursorX += 4 + letterSpacing;
+        }
         textSpan = textSpan->nextSpan;
+        if (textSpan) {
+            cursorX += 2;
+        }
     }
 }
 
@@ -56,7 +87,7 @@ void wpp::SvgCanvas::DrawImage(
     int height,
     const char *href)
 {
-    pugi::xml_node node = root.append_child("image");
+    pugi::xml_node node = scene.append_child("image");
     node.append_attribute("x").set_value(x);
     node.append_attribute("y").set_value(y);
     node.append_attribute("width").set_value(width);
@@ -72,7 +103,7 @@ void wpp::SvgCanvas::DrawRect(
     Color fill,
     Color stroke
 ) {
-    pugi::xml_node node = root.append_child("rect");
+    pugi::xml_node node = scene.append_child("rect");
     node.append_attribute("x").set_value(x);
     node.append_attribute("y").set_value(y);
     node.append_attribute("width").set_value(width);

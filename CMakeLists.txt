@@ -56,7 +56,7 @@ target_include_directories(render_svg_lib PUBLIC
   libs/render-svg/include/watchpanel
 )
 
-target_link_libraries(render_svg_lib PUBLIC watchpanel_lib PkgConfig::PUGIXML)
+target_link_libraries(render_svg_lib PUBLIC watchpanel_lib bdf_font_lib PkgConfig::PUGIXML)
 
 add_library(led_canvas_lib
   libs/led-canvas/src/led_canvas.cc

@@ -17,7 +17,7 @@ namespace watchpanel {
         uint8_t g;
         uint8_t b;
 
-        void Format(std::string &out);
+        void Format(std::string &out) const;
 
         static Color Parse(const char * colorName);
 

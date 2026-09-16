@@ -1,6 +1,6 @@
 <page>
     <display>
-        <text x="10" y="10" font="tom-thumb">
+        <text x="10" y="10" font="tom-thumb" color="white">
             <tspan>The time is</tspan>
             <tspan></tspan>
             <tspan>{/time/whour}</tspan>
