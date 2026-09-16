@@ -20,6 +20,9 @@ cmake --build build
 ## Run
 ```bash
 ./build/page-renderer configs/pages/weather.xml
-./build/panel-runtime configs/pages/wordclock.xml
 ./build/simulator configs/pages/wordclock.xml
+
+# Runs continuously, re-rendering on WatchPanel's update/page-flip timers,
+# and serves a live auto-refreshing preview at http://localhost:8080
+./build/panel-runtime configs/pages/wordclock.xml [port]
 ```

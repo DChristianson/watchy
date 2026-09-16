@@ -4,14 +4,23 @@
 
 namespace wpp = watchpanel; 
 
-wpp::SvgCanvas::SvgCanvas(int width, int height) {
+wpp::SvgCanvas::SvgCanvas(int width, int height) : width(width), height(height) {
+    Reset();
+}
+
+wpp::SvgCanvas::~SvgCanvas() {}
+
+void wpp::SvgCanvas::Reset() {
     root = doc.append_child("svg");
     root.append_attribute("xmlns").set_value("http://www.w3.org/2000/svg");
     root.append_attribute("width").set_value(width);
     root.append_attribute("height").set_value(height);
 }
 
-wpp::SvgCanvas::~SvgCanvas() {}
+void wpp::SvgCanvas::Clear() {
+    doc.reset();
+    Reset();
+}
 
 void wpp::SvgCanvas::DrawText(
     const TextSpan *textSpan,

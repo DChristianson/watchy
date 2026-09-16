@@ -10,13 +10,21 @@ namespace watchpanel {
     class SvgCanvas : public Canvas {
     private:
 
+        int width;
+        int height;
         pugi::xml_document doc;
         pugi::xml_node root;
+
+        void Reset();
 
     public:
 
         SvgCanvas(int width, int height);
         virtual ~SvgCanvas();
+
+        // Discards everything drawn so far, so the canvas can be reused for
+        // the next frame in a render loop.
+        void Clear();
 
         void DrawText(
             const TextSpan *textSpan,

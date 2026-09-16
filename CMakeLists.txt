@@ -91,7 +91,7 @@ target_link_libraries(clock-led PRIVATE pthread m)
 add_executable(panel-runtime
   apps/panel-runtime/src/main.cc
 )
-target_link_libraries(panel-runtime PRIVATE render_svg_lib)
+target_link_libraries(panel-runtime PRIVATE render_svg_lib pthread)
 
 add_executable(simulator
   apps/simulator/main.cc
