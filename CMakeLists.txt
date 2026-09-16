@@ -83,10 +83,26 @@ add_executable(page-renderer
 )
 target_link_libraries(page-renderer PRIVATE render_svg_lib)
 
+option(WATCHY_ENABLE_RGB_MATRIX "Build clock-led against the real rpi-rgb-led-matrix hardware library (Raspberry Pi only)" OFF)
+
 add_executable(clock-led
   apps/clock-led/src/watchy_main.cc
 )
-target_link_libraries(clock-led PRIVATE pthread m)
+target_link_libraries(clock-led PRIVATE watchpanel_lib led_canvas_lib pthread m)
+
+if(WATCHY_ENABLE_RGB_MATRIX)
+  set(RGB_MATRIX_ROOT "/opt/rpi-rgb-led-matrix" CACHE PATH "Path to a built rpi-rgb-led-matrix checkout")
+  find_path(RGB_MATRIX_INCLUDE_DIR led-matrix.h PATHS "${RGB_MATRIX_ROOT}/include")
+  find_library(RGB_MATRIX_LIBRARY NAMES rgbmatrix PATHS "${RGB_MATRIX_ROOT}/lib")
+  if(NOT RGB_MATRIX_INCLUDE_DIR OR NOT RGB_MATRIX_LIBRARY)
+    message(FATAL_ERROR "WATCHY_ENABLE_RGB_MATRIX is ON but rpi-rgb-led-matrix wasn't found under "
+                         "${RGB_MATRIX_ROOT}. Build it first (see docs/README.md), or set "
+                         "-DRGB_MATRIX_ROOT=/path/to/checkout.")
+  endif()
+  target_compile_definitions(clock-led PRIVATE WATCHY_RGB_MATRIX)
+  target_include_directories(clock-led PRIVATE "${RGB_MATRIX_INCLUDE_DIR}")
+  target_link_libraries(clock-led PRIVATE "${RGB_MATRIX_LIBRARY}" rt)
+endif()
 
 add_executable(panel-runtime
   apps/panel-runtime/src/main.cc

@@ -26,3 +26,27 @@ cmake --build build
 # and serves a live auto-refreshing preview at http://localhost:8080
 ./build/panel-runtime configs/pages/wordclock.xml [port]
 ```
+
+## Running on the Raspberry Pi (real LED hardware)
+`clock-led` runs the same WatchPanel/LedCanvas pipeline as the other apps, but
+by default it just rasterizes without emitting to hardware (safe to build and
+run anywhere). To actually drive an LED matrix:
+
+1. Build [rpi-rgb-led-matrix](https://github.com/hzeller/rpi-rgb-led-matrix)
+   on the Pi, e.g. checked out at `/opt/rpi-rgb-led-matrix` (matching the
+   old project `Makefile`'s convention).
+2. Configure with the hardware flag on:
+   ```bash
+   cmake -S . -B build -DWATCHY_ENABLE_RGB_MATRIX=ON \
+     -DRGB_MATRIX_ROOT=/opt/rpi-rgb-led-matrix   # only needed if not at the default path
+   cmake --build build
+   ```
+3. Run it, passing any `--led-*` hardware flags the library understands
+   (gpio mapping, rows/cols, daemon mode, etc.) plus the page to display:
+   ```bash
+   sudo ./build/clock-led configs/pages/wordclock.xml \
+     --led-gpio-mapping=adafruit-hat-pwm --led-rows=64 --led-cols=64 --led-daemon
+   ```
+
+This hardware path can only be built and tested on the Pi itself — the
+default (`WATCHY_ENABLE_RGB_MATRIX=OFF`) build is what's exercised in CI/Docker.

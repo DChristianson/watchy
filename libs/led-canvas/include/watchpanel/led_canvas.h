@@ -3,6 +3,8 @@
 
 #include "watchpanel/graphics.h"
 
+#include <cstdint>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -10,8 +12,16 @@ namespace watchpanel {
 
 class LedCanvas : public Canvas {
  public:
+  // Called by Flush() with the rasterized RGB24 pixel buffer (row-major,
+  // 3 bytes per pixel). Lets a hardware-specific driver (e.g. clock-led's
+  // rpi-rgb-led-matrix integration) consume the frame without LedCanvas
+  // itself depending on any hardware library.
+  using FlushSink = std::function<void(int width, int height, const std::vector<uint8_t> &pixels)>;
+
   LedCanvas(int width, int height, const std::string &fontPath = "fonts/tom-thumb.bdf");
   ~LedCanvas() override;
+
+  void SetFlushSink(FlushSink sink);
 
   void DrawText(
       const TextSpan *textSpan,
@@ -49,6 +59,7 @@ class LedCanvas : public Canvas {
   int height_;
   std::string fontPath_;
   std::vector<uint8_t> pixels_;
+  FlushSink flushSink_;
 
   void SetPixel(int x, int y, const Color &color);
   void DrawGlyph(unsigned char ch, const Color &color, int x, int y);

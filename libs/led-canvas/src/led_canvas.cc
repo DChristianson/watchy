@@ -2,6 +2,7 @@
 #include "watchpanel/bdf_font.h"
 
 #include <algorithm>
+#include <utility>
 
 namespace watchpanel {
 
@@ -9,6 +10,10 @@ LedCanvas::LedCanvas(int width, int height, const std::string &fontPath)
     : width_(width), height_(height), fontPath_(fontPath), pixels_(width * height * 3, 0) {}
 
 LedCanvas::~LedCanvas() {}
+
+void LedCanvas::SetFlushSink(FlushSink sink) {
+  flushSink_ = std::move(sink);
+}
 
 void LedCanvas::Clear() {
   std::fill(pixels_.begin(), pixels_.end(), 0);
@@ -90,8 +95,9 @@ void LedCanvas::DrawImage(
 }
 
 void LedCanvas::Flush() {
-  // Hardware-specific emission is intentionally left as a stub here.
-  // This class implements the Canvas contract and exposes the rasterized pixel buffer.
+  if (flushSink_) {
+    flushSink_(width_, height_, pixels_);
+  }
 }
 
 }  // namespace watchpanel
