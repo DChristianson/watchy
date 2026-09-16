@@ -27,8 +27,24 @@ cmake --build build
 ./build/panel-runtime configs/pages/wordclock.xml [port]
 ```
 
+## Page schema
+`<text>` elements support optional word-wrapping and overflow clipping within
+a declared box:
+
+```xml
+<text x="0" y="0" width="64" height="64" wrap="word" overflow="clip" color="white">
+  <tspan>A headline that's longer than the panel is wide</tspan>
+</text>
+```
+
+- `width` / `height` (optional, default unbounded): the layout box for wrapping/clipping.
+- `wrap`: `none` (default) — one line per `<tspan>`, no wrapping — or `word` — wraps each `<tspan>`'s text to fit `width`, using real glyph widths from the BDF font.
+- `overflow`: `visible` (default) — draw past the box edges — or `clip` — hard-clip anything outside `x..x+width, y..y+height`.
+
+Omitting all of these renders exactly as before this feature existed.
+
 ## Running on the Raspberry Pi (real LED hardware)
-`clock-led` runs the same WatchPanel/LedCanvas pipeline as the other apps, but
+`clock-led` runs the same WatchPanel/LedRaster pipeline as the other apps, but
 by default it just rasterizes without emitting to hardware (safe to build and
 run anywhere). To actually drive an LED matrix:
 

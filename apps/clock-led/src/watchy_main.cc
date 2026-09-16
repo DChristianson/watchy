@@ -1,5 +1,5 @@
 #include "watchpanel/watchpanel.h"
-#include "watchpanel/led_canvas.h"
+#include "watchpanel/led_raster.h"
 
 #include <atomic>
 #include <chrono>
@@ -58,8 +58,9 @@ int main(int argc, char **argv) {
   const std::string secrets = "configs/runtime/secrets.json";
   const long refreshMs = 1000;
 
-  watchpanel::LedCanvas canvas(width, height);
-  watchpanel::WatchPanel panel(&canvas, config, secrets);
+  watchpanel::LedRaster raster(width, height);
+  watchpanel::GraphicsContext context(&raster);
+  watchpanel::WatchPanel panel(&context, config, secrets);
   if (panel.Load(page) != 0) {
     std::cerr << "clock-led: failed to load panel page: " << page << std::endl;
 #ifdef WATCHY_RGB_MATRIX
@@ -69,7 +70,7 @@ int main(int argc, char **argv) {
   }
 
 #ifdef WATCHY_RGB_MATRIX
-  canvas.SetFlushSink([matrix](int w, int h, const std::vector<uint8_t> &pixels) {
+  raster.SetFlushSink([matrix](int w, int h, const std::vector<uint8_t> &pixels) {
     for (int y = 0; y < h; ++y) {
       for (int x = 0; x < w; ++x) {
         const int idx = (y * w + x) * 3;
@@ -81,9 +82,9 @@ int main(int argc, char **argv) {
 
   while (running) {
     panel.Update();
-    canvas.Clear();
+    raster.Clear();
     panel.Draw();
-    canvas.Flush();
+    raster.Flush();
     std::this_thread::sleep_for(std::chrono::milliseconds(refreshMs));
   }
 

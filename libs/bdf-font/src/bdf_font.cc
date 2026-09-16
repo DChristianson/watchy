@@ -27,16 +27,30 @@ void BdfFont::ParseFile(const std::string &path) {
     int width = 0;
     int height = 0;
     int storageWidth = 0;
+    int xoff = 0;
+    int yoff = 0;
+    int dwidth = 0;
     bool inBitmap = false;
     std::vector<unsigned int> rows;
     std::string line;
 
     while (std::getline(in, line)) {
+        if (StartsWith(line, "FONT_ASCENT ")) {
+            ascent = std::atoi(line.substr(12).c_str());
+            continue;
+        }
+        if (StartsWith(line, "FONT_DESCENT ")) {
+            descent = std::atoi(line.substr(13).c_str());
+            continue;
+        }
         if (StartsWith(line, "STARTCHAR")) {
             encoding = -1;
             width = 0;
             height = 0;
             storageWidth = 0;
+            xoff = 0;
+            yoff = 0;
+            dwidth = 0;
             rows.clear();
             inBitmap = false;
             continue;
@@ -45,10 +59,14 @@ void BdfFont::ParseFile(const std::string &path) {
             encoding = std::atoi(line.substr(9).c_str());
             continue;
         }
+        if (StartsWith(line, "DWIDTH ")) {
+            std::istringstream ss(line.substr(7));
+            int dwy = 0;
+            ss >> dwidth >> dwy;
+            continue;
+        }
         if (StartsWith(line, "BBX ")) {
             std::istringstream ss(line.substr(4));
-            int xoff = 0;
-            int yoff = 0;
             ss >> width >> height >> xoff >> yoff;
             storageWidth = ((width + 7) / 8) * 8;
             continue;
@@ -63,6 +81,9 @@ void BdfFont::ParseFile(const std::string &path) {
                 g.width = width;
                 g.height = height;
                 g.storageWidth = storageWidth;
+                g.xOffset = xoff;
+                g.yOffset = yoff;
+                g.dwidth = dwidth;
                 g.rows = rows;
                 glyphs[encoding] = g;
             }

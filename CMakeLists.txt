@@ -17,9 +17,19 @@ if(NOT RAPIDJSON_INCLUDE_DIR)
   message(FATAL_ERROR "rapidjson headers not found (macOS: brew install rapidjson; Ubuntu/Debian: apt install rapidjson-dev)")
 endif()
 
+add_library(bdf_font_lib
+  libs/bdf-font/src/bdf_font.cc
+)
+
+target_include_directories(bdf_font_lib PUBLIC
+  libs/bdf-font/include
+)
+
 add_library(watchpanel_lib
   libs/watchpanel/src/model.cc
   libs/watchpanel/src/graphics.cc
+  libs/watchpanel/src/graphics_context.cc
+  libs/watchpanel/src/raster.cc
   libs/watchpanel/src/strings.cc
   libs/watchpanel/src/update.cc
   libs/watchpanel/src/data.cc
@@ -35,20 +45,12 @@ target_include_directories(watchpanel_lib PUBLIC
 )
 
 target_link_libraries(watchpanel_lib
-  PUBLIC PkgConfig::PUGIXML PkgConfig::CURL
+  PUBLIC PkgConfig::PUGIXML PkgConfig::CURL bdf_font_lib
   PRIVATE pthread
 )
 
-add_library(bdf_font_lib
-  libs/bdf-font/src/bdf_font.cc
-)
-
-target_include_directories(bdf_font_lib PUBLIC
-  libs/bdf-font/include
-)
-
 add_library(render_svg_lib
-  libs/render-svg/src/svg_canvas.cc
+  libs/render-svg/src/svg_raster.cc
 )
 
 target_include_directories(render_svg_lib PUBLIC
@@ -56,27 +58,27 @@ target_include_directories(render_svg_lib PUBLIC
   libs/render-svg/include/watchpanel
 )
 
-target_link_libraries(render_svg_lib PUBLIC watchpanel_lib bdf_font_lib PkgConfig::PUGIXML)
+target_link_libraries(render_svg_lib PUBLIC watchpanel_lib PkgConfig::PUGIXML)
 
-add_library(led_canvas_lib
-  libs/led-canvas/src/led_canvas.cc
+add_library(led_raster_lib
+  libs/led-raster/src/led_raster.cc
 )
 
-target_include_directories(led_canvas_lib PUBLIC
-  libs/led-canvas/include
+target_include_directories(led_raster_lib PUBLIC
+  libs/led-raster/include
 )
 
-target_link_libraries(led_canvas_lib PUBLIC watchpanel_lib bdf_font_lib)
+target_link_libraries(led_raster_lib PUBLIC watchpanel_lib)
 
-add_library(terminal_canvas_lib
-  libs/terminal-canvas/src/terminal_canvas.cc
+add_library(terminal_raster_lib
+  libs/terminal-raster/src/terminal_raster.cc
 )
 
-target_include_directories(terminal_canvas_lib PUBLIC
-  libs/terminal-canvas/include
+target_include_directories(terminal_raster_lib PUBLIC
+  libs/terminal-raster/include
 )
 
-target_link_libraries(terminal_canvas_lib PUBLIC watchpanel_lib bdf_font_lib)
+target_link_libraries(terminal_raster_lib PUBLIC watchpanel_lib)
 
 add_executable(page-renderer
   apps/page-renderer/src/main.cc
@@ -88,7 +90,7 @@ option(WATCHY_ENABLE_RGB_MATRIX "Build clock-led against the real rpi-rgb-led-ma
 add_executable(clock-led
   apps/clock-led/src/watchy_main.cc
 )
-target_link_libraries(clock-led PRIVATE watchpanel_lib led_canvas_lib pthread m)
+target_link_libraries(clock-led PRIVATE watchpanel_lib led_raster_lib pthread m)
 
 if(WATCHY_ENABLE_RGB_MATRIX)
   set(RGB_MATRIX_ROOT "/opt/rpi-rgb-led-matrix" CACHE PATH "Path to a built rpi-rgb-led-matrix checkout")
@@ -112,6 +114,16 @@ target_link_libraries(panel-runtime PRIVATE render_svg_lib pthread)
 add_executable(simulator
   apps/simulator/main.cc
 )
-target_link_libraries(simulator PRIVATE terminal_canvas_lib)
+target_link_libraries(simulator PRIVATE terminal_raster_lib)
 
 install(TARGETS page-renderer clock-led panel-runtime simulator DESTINATION bin)
+
+enable_testing()
+
+add_executable(bdf_font_test
+  tests/bdf_font_test.cc
+)
+target_link_libraries(bdf_font_test PRIVATE watchpanel_lib)
+
+add_test(NAME bdf_font_test COMMAND bdf_font_test)
+set_tests_properties(bdf_font_test PROPERTIES WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")

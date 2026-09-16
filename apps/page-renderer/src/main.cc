@@ -1,6 +1,6 @@
 
 #include "watchpanel/watchpanel.h"
-#include "watchpanel/svg_canvas.h"
+#include "watchpanel/svg_raster.h"
 
 #include <iostream>
 #include <string>
@@ -13,8 +13,9 @@ int main(int argc, char *argv[]) {
 
   for (int i = 1; i < argc; i++) {
     const char *file = argv[i];
-    wpp::SvgCanvas canvas(64, 64);
-    wpp::WatchPage wp(&canvas, config, secrets);
+    wpp::SvgRaster raster(64, 64);
+    wpp::GraphicsContext context(&raster);
+    wpp::WatchPage wp(&context, config, secrets);
     std::cout << "Loading " << file << std::endl;
     wp.Load(file);
     std::cout << "Updating..." << std::endl;
@@ -24,9 +25,8 @@ int main(int argc, char *argv[]) {
     std::cout << "Saving..." << std::endl;
     std::string out(file);
     out += ".svg";
-    canvas.Save(out.c_str());
+    raster.Save(out.c_str());
   }
   std::cout << "done" << std::endl;
   return 0;
 }
-

@@ -24,6 +24,8 @@ namespace watchpanel {
     const char * _COLOR_ = "color";
     const char * _LETTER_SPACING_ = "letter-spacing";
     const char * _LINE_OFFSET_ = "line-offset";
+    const char * _WRAP_ = "wrap";
+    const char * _OVERFLOW_ = "overflow";
     const char * _FEED_ = "feed";
     const char * _NAME_ = "name";
     const char * _HREF_ = "href";
@@ -36,10 +38,10 @@ namespace watchpanel {
 
 namespace wpp = watchpanel; 
 
-wpp::WatchPage::WatchPage(Canvas *canvas,
+wpp::WatchPage::WatchPage(GraphicsContext *context,
                           const std::string &configPath,
                           const std::string &secretsPath)
-    : canvas(canvas), configPath(configPath), secretsPath(secretsPath) {}
+    : context(context), configPath(configPath), secretsPath(secretsPath) {}
 
 int wpp::WatchPage::Load(const char *path)
 {
@@ -101,10 +103,17 @@ int wpp::WatchPage::Load(const char *path)
             Color color = Color::Parse(colorName);
             int x = ParseInt(graphic_item.attribute(_X_).value());
             int y = ParseInt(graphic_item.attribute(_Y_).value());
+            int text_width = ParseInt(graphic_item.attribute(_WIDTH_).value());
+            int text_height = ParseInt(graphic_item.attribute(_HEIGHT_).value());
             int letter_spacing = ParseInt(graphic_item.attribute(_LETTER_SPACING_).value(), 1);
             int line_offset = ParseInt(graphic_item.attribute(_LINE_OFFSET_).value(), 0);
+            const char * wrapName = graphic_item.attribute(_WRAP_).value();
+            Wrap wrap = (strcmp(wrapName, "word") == 0) ? Wrap::kWord : Wrap::kNone;
+            const char * overflowName = graphic_item.attribute(_OVERFLOW_).value();
+            Overflow overflow = (strcmp(overflowName, "clip") == 0) ? Overflow::kClip : Overflow::kVisible;
 
-            graphic = new TextGraphic(canvas, fontName, color, x, y, letter_spacing, line_offset);
+            graphic = new TextGraphic(context, fontName, color, x, y, text_width, text_height,
+                                       letter_spacing, line_offset, wrap, overflow);
 
             pugi::xml_node span = graphic_item.child("tspan");
             if (span) {
@@ -126,7 +135,7 @@ int wpp::WatchPage::Load(const char *path)
             int width = ParseInt(graphic_item.attribute(_WIDTH_).value());
             int height = ParseInt(graphic_item.attribute(_HEIGHT_).value());
             const char * href = graphic_item.attribute(_HREF_).value();
-            graphic = new ImageGraphic(canvas, x, y, width, height, href);
+            graphic = new ImageGraphic(context, x, y, width, height, href);
             if (FormattedString::IsTemplatized(href)) {
                 updateList.push_back(
                     new UpdateFormattedString(
@@ -147,7 +156,7 @@ int wpp::WatchPage::Load(const char *path)
             const char * strokeName = graphic_item.attribute(_STROKE_).value();
             Color stroke = Color::Parse(strokeName);
 
-            graphic = new RectGraphic(canvas, x, y, width, height, fill, stroke);
+            graphic = new RectGraphic(context, x, y, width, height, fill, stroke);
 
         } else {
             // UNKNOWN graphic
@@ -228,10 +237,10 @@ wpp::WatchPage::~WatchPage() {
     Clear();
 }
 
-wpp::WatchPanel::WatchPanel(Canvas *canvas,
+wpp::WatchPanel::WatchPanel(GraphicsContext *context,
                             const std::string &configPath,
                             const std::string &secretsPath)
-    : canvas(canvas),
+    : context(context),
       configPath(configPath),
       secretsPath(secretsPath),
       currentPage(0),
@@ -246,7 +255,7 @@ wpp::WatchPanel::~WatchPanel() {
 }
 
 int wpp::WatchPanel::Load(const char *path) {
-    auto page = new WatchPage(canvas, configPath, secretsPath);
+    auto page = new WatchPage(context, configPath, secretsPath);
     if (page->Load(path) != 0) {
         delete page;
         return -1;

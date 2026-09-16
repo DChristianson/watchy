@@ -8,6 +8,8 @@
 
 namespace watchpanel {
 
+    class GraphicsContext;
+
     struct Color {
 
         Color() : r(0), g(0), b(0) {}
@@ -31,43 +33,21 @@ namespace watchpanel {
 
     };
 
-    class Canvas {
-    public:
-    
-        virtual ~Canvas();
+    enum class Wrap {
+        kNone,
+        kWord,
+    };
 
-        virtual void DrawText(
-            const TextSpan *textSpan,
-            const char *fontName,
-            Color color,
-            int x,
-            int y,
-            int letterSpacing,
-            int lineOffset);
-
-        virtual void DrawRect(
-            int x,
-            int y,
-            int width,
-            int height,
-            Color fill,
-            Color stroke);
-
-        virtual void DrawImage(
-            int x,
-            int y,
-            int width,
-            int height,
-            const char *href        
-        );
-
+    enum class Overflow {
+        kVisible,
+        kClip,
     };
 
     class Graphic {
     protected:
 
-        Canvas * canvas;
-        Graphic(Canvas * canvas) : canvas(canvas) {}
+        GraphicsContext * context;
+        Graphic(GraphicsContext * context) : context(context) {}
 
     public:
 
@@ -85,19 +65,27 @@ namespace watchpanel {
         Color color;
         int x;
         int y;
+        int width;
+        int height;
         int letterSpacing;
         int lineOffset;
+        Wrap wrap;
+        Overflow overflow;
 
     public:
 
         TextGraphic(
-            Canvas * canvas,
+            GraphicsContext * context,
             const char *fontName,
             Color color,
             int x,
             int y,
+            int width,
+            int height,
             int letterSpacing,
-            int lineOffset);
+            int lineOffset,
+            Wrap wrap,
+            Overflow overflow);
         ~TextGraphic();
 
         TextSpan &AppendText(const char *text);
@@ -119,7 +107,7 @@ namespace watchpanel {
     public:
 
         RectGraphic(
-            Canvas * canvas,
+            GraphicsContext * context,
             int x,
             int y,
             int width,
@@ -144,7 +132,7 @@ namespace watchpanel {
     public:
 
         ImageGraphic(
-            Canvas * canvas,
+            GraphicsContext * context,
             int x,
             int y,
             int width,

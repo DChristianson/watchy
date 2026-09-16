@@ -1,7 +1,7 @@
 #ifndef WATCHPANEL_H_
 #define WATCHPANEL_H_
 
-#include "graphics.h"
+#include "graphics_context.h"
 #include "data.h"
 #include "update.h"
 
@@ -18,8 +18,8 @@ namespace watchpanel {
         std::vector<DataImport *> dataList;
         std::vector<Updateable *> updateList;
         std::vector<Graphic *> displayList;
-        
-        Canvas *canvas;
+
+        GraphicsContext *context;
         std::string configPath;
         std::string secretsPath;
 
@@ -27,7 +27,7 @@ namespace watchpanel {
 
     public:
 
-        WatchPage(Canvas * canvas,
+        WatchPage(GraphicsContext * context,
                   const std::string &configPath = "config.json",
                   const std::string &secretsPath = "secrets.json");
         ~WatchPage();
@@ -44,7 +44,7 @@ namespace watchpanel {
     private:
 
         std::vector<WatchPage *> pageList;
-        Canvas *canvas;
+        GraphicsContext *context;
         std::string configPath;
         std::string secretsPath;
         int currentPage;
@@ -55,7 +55,7 @@ namespace watchpanel {
 
     public:
 
-        WatchPanel(Canvas * canvas,
+        WatchPanel(GraphicsContext * context,
                    const std::string &configPath = "config.json",
                    const std::string &secretsPath = "secrets.json");
         ~WatchPanel();

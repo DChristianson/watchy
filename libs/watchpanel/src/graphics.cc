@@ -1,4 +1,5 @@
 #include "graphics.h"
+#include "graphics_context.h"
 #include <cstdio>
 #include <map>
 #include <iostream>
@@ -98,54 +99,33 @@ wpp::Color wpp::Color::Parse(const char *colorName) {
     return ColorBlack;        
 }
 
-wpp::Canvas::~Canvas() {}
-
-void wpp::Canvas::DrawText(
-    const TextSpan *textSpan,
-    const char *fontName,
-    Color color,
-    int x,
-    int y,
-    int letterSpacing,
-    int lineOffset
-) {}
-
-void wpp::Canvas::DrawImage(
-    int x,
-    int y,
-    int width,
-    int height,
-    const char *href
-) {}
-
-void wpp::Canvas::DrawRect(
-    int x,
-    int y,
-    int width,
-    int height,
-    Color fill,
-    Color stroke
-) {}
-
 wpp::Graphic::~Graphic() {}
 
 wpp::TextGraphic::TextGraphic(
-    Canvas * canvas,
+    GraphicsContext * context,
     const char *fontName,
     wpp::Color color,
     int x,
     int y,
+    int width,
+    int height,
     int letterSpacing,
-    int lineOffset
-) : Graphic(canvas),
+    int lineOffset,
+    Wrap wrap,
+    Overflow overflow
+) : Graphic(context),
     firstSpan(0),
     lastSpan(0),
-    fontName(fontName), 
-    color(color), 
-    x(x), 
-    y(y), 
-    letterSpacing(letterSpacing), 
-    lineOffset(lineOffset)
+    fontName(fontName),
+    color(color),
+    x(x),
+    y(y),
+    width(width),
+    height(height),
+    letterSpacing(letterSpacing),
+    lineOffset(lineOffset),
+    wrap(wrap),
+    overflow(overflow)
 {}
 
 wpp::TextSpan &wpp::TextGraphic::AppendText(const char *text) {
@@ -162,7 +142,7 @@ wpp::TextSpan &wpp::TextGraphic::AppendText(const char *text) {
 
 void wpp::TextGraphic::Draw()
 {
-    canvas->DrawText(firstSpan, fontName.c_str(), color, x, y, letterSpacing, lineOffset);
+    context->DrawText(firstSpan, fontName.c_str(), color, x, y, width, height, letterSpacing, lineOffset, wrap, overflow);
 }
 
 wpp::TextGraphic::~TextGraphic() {
@@ -175,13 +155,13 @@ wpp::TextGraphic::~TextGraphic() {
 }
 
 wpp::ImageGraphic::ImageGraphic(
-    wpp::Canvas * canvas,
+    GraphicsContext * context,
     int x,
     int y,
     int width,
     int height,
     const char *href
-) : Graphic(canvas),
+) : Graphic(context),
     x(x),
     y(y),
     width(width),
@@ -194,20 +174,20 @@ void wpp::ImageGraphic::SetHRef(const char *value) {
 
 void wpp::ImageGraphic::Draw()
 {
-    canvas->DrawImage(x, y, width, height, href.c_str());
+    context->DrawImage(x, y, width, height, href.c_str());
 }
 
 wpp::ImageGraphic::~ImageGraphic() {}
 
 wpp::RectGraphic::RectGraphic(
-    wpp::Canvas *canvas,
+    GraphicsContext *context,
     int x,
     int y,
     int width,
     int height,
     Color fill,
     Color stroke
-) : Graphic(canvas),
+) : Graphic(context),
     x(x),
     y(y),
     width(width),
@@ -217,7 +197,7 @@ wpp::RectGraphic::RectGraphic(
 
 void wpp::RectGraphic::Draw()
 {
-    canvas->DrawRect(x, y, width, height, fill, stroke);
+    context->DrawRect(x, y, width, height, fill, stroke);
 }
 
 wpp::RectGraphic::~RectGraphic() {}

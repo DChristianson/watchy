@@ -1,5 +1,5 @@
 #include "watchpanel/watchpanel.h"
-#include "watchpanel/svg_canvas.h"
+#include "watchpanel/svg_raster.h"
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -129,8 +129,9 @@ int main(int argc, char **argv) {
   std::signal(SIGTERM, HandleShutdownSignal);
   std::signal(SIGPIPE, SIG_IGN);
 
-  watchpanel::SvgCanvas canvas(64, 64);
-  watchpanel::WatchPanel panel(&canvas, config, secrets);
+  watchpanel::SvgRaster raster(64, 64);
+  watchpanel::GraphicsContext context(&raster);
+  watchpanel::WatchPanel panel(&context, config, secrets);
   if (panel.Load(page) != 0) {
     std::cerr << "failed to load panel page: " << page << std::endl;
     return 1;
@@ -142,9 +143,9 @@ int main(int argc, char **argv) {
 
   while (running) {
     panel.Update();
-    canvas.Clear();
+    raster.Clear();
     panel.Draw();
-    canvas.Save(outPath.c_str());
+    raster.Save(outPath.c_str());
     std::this_thread::sleep_for(std::chrono::milliseconds(refreshMs));
   }
 

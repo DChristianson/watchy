@@ -1,5 +1,5 @@
 #include "watchpanel/watchpanel.h"
-#include "watchpanel/terminal_canvas.h"
+#include "watchpanel/terminal_raster.h"
 
 #include <iostream>
 #include <string>
@@ -14,8 +14,9 @@ int main(int argc, char **argv) {
 
   std::cout << "usage: ./build/simulator [page.xml] [width] [height] [font-bdf-path]" << std::endl;
 
-  watchpanel::TerminalCanvas canvas(width, height, fontPath);
-  watchpanel::WatchPage wp(&canvas, config, secrets);
+  watchpanel::TerminalRaster raster(width, height);
+  watchpanel::GraphicsContext context(&raster, fontPath);
+  watchpanel::WatchPage wp(&context, config, secrets);
   if (wp.Load(page) != 0) {
     std::cerr << "failed to load page: " << page << std::endl;
     return 1;
@@ -23,6 +24,6 @@ int main(int argc, char **argv) {
 
   wp.Update();
   wp.Draw();
-  std::cout << canvas.Render() << std::endl;
+  std::cout << raster.Render() << std::endl;
   return 0;
 }
