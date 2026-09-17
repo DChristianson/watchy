@@ -81,7 +81,8 @@ void wpp::JsonFileData::Pull(const Model &model, rapidjson::Document &out) {
     }
 }
 
-wpp::FeedData::FeedData(const char *name, const char *href) : DataImport(name), href(href) {}
+wpp::FeedData::FeedData(const char *name, const char *href, long maxAgeSeconds, const char *cacheDir)
+    : DataImport(name), href(href), maxAgeSeconds(maxAgeSeconds), cacheDir(cacheDir) {}
 
 wpp::FeedData::~FeedData() {}
 
@@ -90,11 +91,10 @@ void wpp::FeedData::SetHRef(const char *value) {
 }
 
 void wpp::FeedData::Pull(const Model &model, rapidjson::Document &out) {
-    // do fetch
     std::cout << "Fetching " << href.c_str() << std::endl;
-    int res = hamper::fetch_url(href.c_str(), out, "tmp.cache.json");
+    int res = hamper::fetch_url(href.c_str(), out, maxAgeSeconds, cacheDir.c_str());
     if (0 != res) {
-        std::cerr << "Warning: fetch failed for " << href.c_str() << std::endl;
+        std::cerr << "Warning: fetch failed for " << href.c_str() << " with no cached data to fall back to" << std::endl;
         out.SetObject();
     }
 }

@@ -135,6 +135,7 @@ namespace watchpanel {
         int width;
         int height;
         std::string href;
+        long maxAgeSeconds;
 
     public:
 
@@ -144,7 +145,8 @@ namespace watchpanel {
             int y,
             int width,
             int height,
-            const char *href
+            const char *href,
+            long maxAgeSeconds = 24 * 60 * 60
         );
         ~ImageGraphic();
 

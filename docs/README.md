@@ -43,6 +43,31 @@ a declared box:
 
 Omitting all of these renders exactly as before this feature existed.
 
+`<feed>` and `<image>` elements support an optional `ttl` attribute — an
+ISO-8601 duration (`PT15M` = 15 minutes, `P1D` = 1 day, `PT24H` = 24 hours,
+etc. — only day/hour/minute/second components are supported, since
+year/month aren't a fixed number of seconds) controlling how long a fetched
+copy is reused before a refresh is attempted:
+
+```xml
+<feed name="weather" href="https://api.openweathermap.org/..." ttl="PT15M"/>
+<image href="https://openweathermap.org/img/wn/{icon}.png" ttl="P1D"/>
+```
+
+Defaults: 15 minutes for feeds, 24 hours for images (an icon URL always
+points at the same static artwork, so caching it aggressively is free
+correctness, not staleness risk).
+
+## Fetch caching
+All remote fetches (JSON feeds and images) go through `hamper`'s local
+cache (`cache/` at the repo root by default — configurable via the
+`cacheDir` parameter on `WatchPage`/`WatchPanel`/`GraphicsContext`, and
+gitignored). A cache entry is only replaced by a *successful* fetch —
+**a stale entry is still served if a refresh attempt fails**, so a flaky
+network or a rate-limited API degrades to "showing slightly old data"
+rather than a blank panel. Only a URL that has never been fetched
+successfully at all (nothing to fall back to) results in a real failure.
+
 ## Running on the Raspberry Pi (real LED hardware)
 `clock-led` runs the same WatchPanel/LedRaster pipeline as the other apps, but
 by default it just rasterizes without emitting to hardware (safe to build and

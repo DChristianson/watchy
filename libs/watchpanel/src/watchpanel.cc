@@ -1,6 +1,7 @@
 #include "watchpanel.h"
 #include "pugixml.hpp"
 #include "timedata.h"
+#include "iso_duration.h"
 
 #include <stdlib.h>
 #include <iostream>
@@ -29,9 +30,20 @@ namespace watchpanel {
     const char * _FEED_ = "feed";
     const char * _NAME_ = "name";
     const char * _HREF_ = "href";
+    const char * _TTL_ = "ttl";
 
     int ParseInt(const char * str, int defaultValue = 0) {
         return atoi(str);
+    }
+
+    // Parses a ttl="PT15M"-style ISO-8601 duration attribute, falling back
+    // to defaultSeconds if the attribute is absent or malformed.
+    long ParseTtlSeconds(const char * iso, long defaultSeconds) {
+        long seconds = 0;
+        if (iso != NULL && iso[0] != 0 && ParseIsoDuration(iso, &seconds)) {
+            return seconds;
+        }
+        return defaultSeconds;
     }
 
 }
@@ -40,8 +52,9 @@ namespace wpp = watchpanel;
 
 wpp::WatchPage::WatchPage(GraphicsContext *context,
                           const std::string &configPath,
-                          const std::string &secretsPath)
-    : context(context), configPath(configPath), secretsPath(secretsPath) {}
+                          const std::string &secretsPath,
+                          const std::string &cacheDir)
+    : context(context), configPath(configPath), secretsPath(secretsPath), cacheDir(cacheDir) {}
 
 int wpp::WatchPage::Load(const char *path)
 {
@@ -75,7 +88,9 @@ int wpp::WatchPage::Load(const char *path)
         if (strcmp(name, _FEED_) == 0) {
             const char *feedName = data_item.attribute(_NAME_).value();
             const char *href = data_item.attribute(_HREF_).value();
-            import = new FeedData(feedName, href);
+            const char *ttl = data_item.attribute(_TTL_).value();
+            long maxAgeSeconds = ParseTtlSeconds(ttl, 15 * 60);
+            import = new FeedData(feedName, href, maxAgeSeconds, cacheDir.c_str());
             if (FormattedString::IsTemplatized(href)) {
                 import->AddUpdate(
                     new UpdateFormattedString(
@@ -135,7 +150,9 @@ int wpp::WatchPage::Load(const char *path)
             int width = ParseInt(graphic_item.attribute(_WIDTH_).value());
             int height = ParseInt(graphic_item.attribute(_HEIGHT_).value());
             const char * href = graphic_item.attribute(_HREF_).value();
-            graphic = new ImageGraphic(context, x, y, width, height, href);
+            const char * ttl = graphic_item.attribute(_TTL_).value();
+            long imageMaxAgeSeconds = ParseTtlSeconds(ttl, 24 * 60 * 60);
+            graphic = new ImageGraphic(context, x, y, width, height, href, imageMaxAgeSeconds);
             if (FormattedString::IsTemplatized(href)) {
                 updateList.push_back(
                     new UpdateFormattedString(
@@ -239,10 +256,12 @@ wpp::WatchPage::~WatchPage() {
 
 wpp::WatchPanel::WatchPanel(GraphicsContext *context,
                             const std::string &configPath,
-                            const std::string &secretsPath)
+                            const std::string &secretsPath,
+                            const std::string &cacheDir)
     : context(context),
       configPath(configPath),
       secretsPath(secretsPath),
+      cacheDir(cacheDir),
       currentPage(0),
       lastUpdate(0),
       lastPageFlip(0),
@@ -255,7 +274,7 @@ wpp::WatchPanel::~WatchPanel() {
 }
 
 int wpp::WatchPanel::Load(const char *path) {
-    auto page = new WatchPage(context, configPath, secretsPath);
+    auto page = new WatchPage(context, configPath, secretsPath, cacheDir);
     if (page->Load(path) != 0) {
         delete page;
         return -1;

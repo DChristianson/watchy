@@ -69,9 +69,14 @@ int main() {
     out << xml;
     out.close();
 
+    // Use an isolated, gitignored cache directory rather than the default
+    // "cache" -- this test would otherwise leave a real cache/ directory
+    // at the repo root on every run.
+    const std::string cacheDir = "tests/fixtures/.weather_page_test_cache";
+
     watchy_test::FakeRaster raster(64, 64);
-    GraphicsContext context(&raster, "fonts/tom-thumb.bdf");
-    WatchPage page(&context, "configs/runtime/config.json", "configs/runtime/secrets.json");
+    GraphicsContext context(&raster, "fonts/tom-thumb.bdf", cacheDir);
+    WatchPage page(&context, "configs/runtime/config.json", "configs/runtime/secrets.json", cacheDir);
     const int loadResult = page.Load(generatedPath.c_str());
     std::remove(generatedPath.c_str());
     Check(loadResult == 0, "weather_test.xml loads");

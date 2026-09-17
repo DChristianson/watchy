@@ -160,13 +160,15 @@ wpp::ImageGraphic::ImageGraphic(
     int y,
     int width,
     int height,
-    const char *href
+    const char *href,
+    long maxAgeSeconds
 ) : Graphic(context),
     x(x),
     y(y),
     width(width),
     height(height),
-    href(href) {}
+    href(href),
+    maxAgeSeconds(maxAgeSeconds) {}
 
 void wpp::ImageGraphic::SetHRef(const char *value) {
     href = value;
@@ -174,7 +176,7 @@ void wpp::ImageGraphic::SetHRef(const char *value) {
 
 void wpp::ImageGraphic::Draw()
 {
-    context->DrawImage(x, y, width, height, href.c_str());
+    context->DrawImage(x, y, width, height, href.c_str(), maxAgeSeconds);
 }
 
 wpp::ImageGraphic::~ImageGraphic() {}

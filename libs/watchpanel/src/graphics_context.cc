@@ -1,14 +1,16 @@
 #include "graphics_context.h"
 #include "watchpanel/bdf_font.h"
 #include "watchpanel/image_decode.h"
+#include "hamper.h"
 
 #include <algorithm>
 #include <sstream>
 
 namespace wpp = watchpanel;
 
-wpp::GraphicsContext::GraphicsContext(Raster *raster, const std::string &fontPath)
-    : raster(raster), fontPath(fontPath) {}
+wpp::GraphicsContext::GraphicsContext(Raster *raster, const std::string &fontPath,
+                                       const std::string &cacheDir)
+    : raster(raster), fontPath(fontPath), cacheDir(cacheDir) {}
 
 int wpp::GraphicsContext::GlyphAdvance(unsigned char ch) const {
     if (fontPath.empty()) return 4;
@@ -181,18 +183,28 @@ void wpp::GraphicsContext::DrawImage(
     int y,
     int width,
     int height,
-    const char *href)
+    const char *href,
+    long maxAgeSeconds)
 {
     const std::string hrefStr(href ? href : "");
     const bool isRemote = hrefStr.rfind("http://", 0) == 0 || hrefStr.rfind("https://", 0) == 0;
 
-    // Local files: decode the real image (PNG/JPEG via stb_image) and
-    // nearest-neighbor scale it to fit the declared box, preserving aspect
-    // ratio and centered (letterboxed) -- matches the pixelated, chunky
-    // look already used elsewhere (SvgRaster's scaled-up glyphs) rather
-    // than a smoothing resize filter.
+    // Remote URLs go through hamper's cache first -- fetched at most once
+    // per maxAgeSeconds, and a failed refresh still falls back to
+    // whatever was last fetched successfully rather than failing here.
+    // Local paths are used as-is.
+    std::string localPath = hrefStr;
+    if (isRemote) {
+        localPath = hamper::fetch_image(hrefStr.c_str(), maxAgeSeconds, cacheDir.c_str());
+    }
+
+    // Decode the real image (PNG/JPEG via stb_image) and nearest-neighbor
+    // scale it to fit the declared box, preserving aspect ratio and
+    // centered (letterboxed) -- matches the pixelated, chunky look already
+    // used elsewhere (SvgRaster's scaled-up glyphs) rather than a
+    // smoothing resize filter.
     DecodedImage decoded;
-    if (!isRemote && !hrefStr.empty() && DecodeImage(hrefStr, &decoded) &&
+    if (!localPath.empty() && DecodeImage(localPath, &decoded) &&
         decoded.width > 0 && decoded.height > 0) {
         const double scale = std::min(
             static_cast<double>(width) / decoded.width,
@@ -217,10 +229,8 @@ void wpp::GraphicsContext::DrawImage(
         return;
     }
 
-    // Remote URLs (the common case today -- weather.xml's icon href is a
-    // live https:// URL) or an unreadable/missing local file: fall back to
-    // a full-box placeholder. Fetching remote image bytes is a separate
-    // follow-up.
+    // Nothing usable: the fetch failed with no cache to fall back to, or
+    // the file couldn't be decoded. Draw a plain placeholder block.
     for (int py = y; py < y + height; ++py) {
         for (int px = x; px < x + width; ++px) {
             raster->SetPixel(px, py, Color(255, 255, 255));

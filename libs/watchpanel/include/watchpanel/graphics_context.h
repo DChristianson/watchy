@@ -16,7 +16,8 @@ namespace watchpanel {
     class GraphicsContext {
     public:
 
-        explicit GraphicsContext(Raster *raster, const std::string &fontPath = "fonts/tom-thumb.bdf");
+        explicit GraphicsContext(Raster *raster, const std::string &fontPath = "fonts/tom-thumb.bdf",
+                                  const std::string &cacheDir = "cache");
 
         void DrawText(
             const TextSpan *textSpan,
@@ -39,20 +40,25 @@ namespace watchpanel {
             Color fill,
             Color stroke);
 
-        // Real image decoding is a follow-up (see docs/README.md); for now
-        // this draws a placeholder block, same as every Raster backend did
-        // before this split.
+        // Local files are decoded and nearest-neighbor scaled into the
+        // box; remote http(s):// URLs are fetched through hamper's cache
+        // first (maxAgeSeconds controls how stale a cached copy may be
+        // before a refresh is attempted -- see watchpanel/hamper.h for
+        // the "stale data still wins over no data" fallback semantics).
+        // Falls back to a placeholder block if decoding/fetching fails.
         void DrawImage(
             int x,
             int y,
             int width,
             int height,
-            const char *href);
+            const char *href,
+            long maxAgeSeconds = 24 * 60 * 60);
 
     private:
 
         Raster *raster;
         std::string fontPath;
+        std::string cacheDir;
 
         struct ClipBox {
             bool active;

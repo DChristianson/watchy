@@ -39,6 +39,8 @@ secrets.json
 
 # Generated at test-run time
 tests/fixtures/weather_test.generated.xml
+tests/fixtures/.weather_page_test_cache/
 
-# hamper's scratch fetch file (written to CWD on every fetch)
-tmp.cache.json
+# hamper's local fetch cache (default location; configurable per WatchPage/
+# WatchPanel/GraphicsContext)
+/cache/

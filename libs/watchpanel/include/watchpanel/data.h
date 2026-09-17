@@ -59,16 +59,19 @@ namespace watchpanel {
 
     class FeedData : public DataImport {
     private:
-        
+
         std::string href;
+        long maxAgeSeconds;
+        std::string cacheDir;
 
     public:
-    
-        FeedData(const char *name, const char *href);
+
+        FeedData(const char *name, const char *href,
+                 long maxAgeSeconds = 15 * 60, const char *cacheDir = "cache");
         ~FeedData();
-    
+
         void SetHRef(const char *href);
-        
+
         void Pull(const Model &model, rapidjson::Document &out);
 
     };

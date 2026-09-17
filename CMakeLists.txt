@@ -39,6 +39,7 @@ add_library(watchpanel_lib
   libs/watchpanel/src/graphics.cc
   libs/watchpanel/src/graphics_context.cc
   libs/watchpanel/src/raster.cc
+  libs/watchpanel/src/iso_duration.cc
   libs/watchpanel/src/strings.cc
   libs/watchpanel/src/update.cc
   libs/watchpanel/src/data.cc
@@ -152,6 +153,22 @@ target_link_libraries(image_decode_test PRIVATE image_decode_lib)
 
 add_test(NAME image_decode_test COMMAND image_decode_test)
 set_tests_properties(image_decode_test PROPERTIES WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+
+add_executable(iso_duration_test
+  tests/iso_duration_test.cc
+)
+target_link_libraries(iso_duration_test PRIVATE watchpanel_lib)
+
+add_test(NAME iso_duration_test COMMAND iso_duration_test)
+set_tests_properties(iso_duration_test PROPERTIES WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+
+add_executable(hamper_cache_test
+  tests/hamper_cache_test.cc
+)
+target_link_libraries(hamper_cache_test PRIVATE watchpanel_lib)
+
+add_test(NAME hamper_cache_test COMMAND hamper_cache_test)
+set_tests_properties(hamper_cache_test PROPERTIES WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
 
 add_executable(weather_page_test
   tests/weather_page_test.cc
