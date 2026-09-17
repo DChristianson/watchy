@@ -127,3 +127,11 @@ target_link_libraries(bdf_font_test PRIVATE watchpanel_lib)
 
 add_test(NAME bdf_font_test COMMAND bdf_font_test)
 set_tests_properties(bdf_font_test PROPERTIES WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+
+add_executable(document_model_test
+  tests/document_model_test.cc
+)
+target_link_libraries(document_model_test PRIVATE watchpanel_lib)
+
+add_test(NAME document_model_test COMMAND document_model_test)
+set_tests_properties(document_model_test PROPERTIES WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
