@@ -5,7 +5,7 @@
     <display>
         <text x="0" y="0" font="tom-thumb">{/weather/main/temp}</text>
         <image x="30" y="10" width="20" height="20" href="https://openweathermap.org/img/wn/{/weather/weather/0/icon}.png"/>
-        <text x="0" y="40" font="tom-thumb">
+        <text x="0" y="40" font="tom-thumb" color="white">
             <tspan>{/time/hh}:{/time/MM}</tspan>
             <tspan>High: {/weather/main/temp_max}, Low: {/weather/main/temp_min}</tspan>
         </text>

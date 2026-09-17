@@ -23,6 +23,13 @@ namespace watchpanel {
 
         static Color Parse(const char * colorName);
 
+        bool operator==(const Color &other) const {
+            return r == other.r && g == other.g && b == other.b;
+        }
+        bool operator!=(const Color &other) const {
+            return !(*this == other);
+        }
+
     };
 
     struct TextSpan {

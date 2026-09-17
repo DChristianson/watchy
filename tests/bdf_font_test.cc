@@ -5,54 +5,16 @@
 // Run via: ctest --test-dir build
 
 #include "watchpanel/graphics_context.h"
-#include "watchpanel/raster.h"
 #include "watchpanel/bdf_font.h"
 
-#include <algorithm>
+#include "fake_raster.h"
+
 #include <cassert>
 #include <iostream>
 #include <string>
 #include <vector>
 
 namespace {
-
-// Records every SetPixel call into a plain grid so a rendered frame can be
-// compared as human-readable ASCII art (space = off, '*' = on).
-class FakeRaster : public watchpanel::Raster {
-public:
-    FakeRaster(int width, int height)
-        : width_(width), height_(height), lit_(width * height, false) {}
-
-    int Width() const override { return width_; }
-    int Height() const override { return height_; }
-
-    void Clear() override {
-        std::fill(lit_.begin(), lit_.end(), false);
-    }
-
-    void SetPixel(int x, int y, watchpanel::Color) override {
-        if (x < 0 || y < 0 || x >= width_ || y >= height_) return;
-        lit_[y * width_ + x] = true;
-    }
-
-    // Joins each row into one '\n'-separated string, so it can be compared
-    // directly against an inline ASCII picture.
-    std::string Render() const {
-        std::string out;
-        for (int y = 0; y < height_; ++y) {
-            for (int x = 0; x < width_; ++x) {
-                out += lit_[y * width_ + x] ? '*' : ' ';
-            }
-            if (y + 1 < height_) out += '\n';
-        }
-        return out;
-    }
-
-private:
-    int width_;
-    int height_;
-    std::vector<bool> lit_;
-};
 
 std::string Join(const std::vector<std::string> &rows) {
     std::string out;
@@ -117,7 +79,7 @@ int main() {
     // col 0; advancing by DWIDTH(4)+letterSpacing(1)=5 puts 'p' at col 5,
     // and its yOffset(-1) shifts it one row lower (rows 1-5) -- visibly
     // dropping the descender below where 'A' sits.
-    FakeRaster raster(8, 6);
+    watchy_test::FakeRaster raster(8, 6);
     GraphicsContext context(&raster, "fonts/tom-thumb.bdf");
     TextSpan span("Ap");
     context.DrawText(&span, "tom-thumb", Color(255, 255, 255),

@@ -25,6 +25,15 @@ target_include_directories(bdf_font_lib PUBLIC
   libs/bdf-font/include
 )
 
+add_library(image_decode_lib
+  libs/image-decode/src/image_decode.cc
+)
+
+target_include_directories(image_decode_lib
+  PUBLIC libs/image-decode/include
+  PRIVATE libs/image-decode/third_party
+)
+
 add_library(watchpanel_lib
   libs/watchpanel/src/model.cc
   libs/watchpanel/src/graphics.cc
@@ -45,7 +54,7 @@ target_include_directories(watchpanel_lib PUBLIC
 )
 
 target_link_libraries(watchpanel_lib
-  PUBLIC PkgConfig::PUGIXML PkgConfig::CURL bdf_font_lib
+  PUBLIC PkgConfig::PUGIXML PkgConfig::CURL bdf_font_lib image_decode_lib
   PRIVATE pthread
 )
 
@@ -135,3 +144,19 @@ target_link_libraries(document_model_test PRIVATE watchpanel_lib)
 
 add_test(NAME document_model_test COMMAND document_model_test)
 set_tests_properties(document_model_test PROPERTIES WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+
+add_executable(image_decode_test
+  tests/image_decode_test.cc
+)
+target_link_libraries(image_decode_test PRIVATE image_decode_lib)
+
+add_test(NAME image_decode_test COMMAND image_decode_test)
+set_tests_properties(image_decode_test PROPERTIES WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+
+add_executable(weather_page_test
+  tests/weather_page_test.cc
+)
+target_link_libraries(weather_page_test PRIVATE watchpanel_lib)
+
+add_test(NAME weather_page_test COMMAND weather_page_test)
+set_tests_properties(weather_page_test PROPERTIES WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")

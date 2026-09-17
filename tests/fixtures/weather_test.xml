@@ -1,0 +1,9 @@
+<page>
+    <data>
+        <feed name="weather" href="__WEATHER_DATA_FILE_URL__"/>
+    </data>
+    <display>
+        <text x="0" y="0" font="tom-thumb" color="white">{/weather/main/temp}</text>
+        <image x="30" y="10" width="30" height="20" href="tests/fixtures/weather_icon.png"/>
+    </display>
+</page>

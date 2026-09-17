@@ -1,5 +1,6 @@
 #include "graphics_context.h"
 #include "watchpanel/bdf_font.h"
+#include "watchpanel/image_decode.h"
 
 #include <algorithm>
 #include <sstream>
@@ -182,7 +183,44 @@ void wpp::GraphicsContext::DrawImage(
     int height,
     const char *href)
 {
-    (void)href;
+    const std::string hrefStr(href ? href : "");
+    const bool isRemote = hrefStr.rfind("http://", 0) == 0 || hrefStr.rfind("https://", 0) == 0;
+
+    // Local files: decode the real image (PNG/JPEG via stb_image) and
+    // nearest-neighbor scale it to fit the declared box, preserving aspect
+    // ratio and centered (letterboxed) -- matches the pixelated, chunky
+    // look already used elsewhere (SvgRaster's scaled-up glyphs) rather
+    // than a smoothing resize filter.
+    DecodedImage decoded;
+    if (!isRemote && !hrefStr.empty() && DecodeImage(hrefStr, &decoded) &&
+        decoded.width > 0 && decoded.height > 0) {
+        const double scale = std::min(
+            static_cast<double>(width) / decoded.width,
+            static_cast<double>(height) / decoded.height);
+        const int drawWidth = std::max(1, static_cast<int>(decoded.width * scale));
+        const int drawHeight = std::max(1, static_cast<int>(decoded.height * scale));
+        const int offsetX = x + (width - drawWidth) / 2;
+        const int offsetY = y + (height - drawHeight) / 2;
+
+        for (int dy = 0; dy < drawHeight; ++dy) {
+            const int srcY = std::min(decoded.height - 1,
+                                       static_cast<int>(static_cast<double>(dy) * decoded.height / drawHeight));
+            for (int dx = 0; dx < drawWidth; ++dx) {
+                const int srcX = std::min(decoded.width - 1,
+                                           static_cast<int>(static_cast<double>(dx) * decoded.width / drawWidth));
+                const uint8_t *pixel = decoded.At(srcX, srcY);
+                const uint8_t alpha = pixel[3];
+                if (alpha < 128) continue;  // mostly-transparent source pixel: leave untouched
+                raster->SetPixel(offsetX + dx, offsetY + dy, Color(pixel[0], pixel[1], pixel[2]));
+            }
+        }
+        return;
+    }
+
+    // Remote URLs (the common case today -- weather.xml's icon href is a
+    // live https:// URL) or an unreadable/missing local file: fall back to
+    // a full-box placeholder. Fetching remote image bytes is a separate
+    // follow-up.
     for (int py = y; py < y + height; ++py) {
         for (int px = x; px < x + width; ++px) {
             raster->SetPixel(px, py, Color(255, 255, 255));

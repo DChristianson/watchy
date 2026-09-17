@@ -36,3 +36,9 @@ secrets.json
 
 # CMake build output
 /build/
+
+# Generated at test-run time
+tests/fixtures/weather_test.generated.xml
+
+# hamper's scratch fetch file (written to CWD on every fetch)
+tmp.cache.json
