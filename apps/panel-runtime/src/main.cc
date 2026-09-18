@@ -10,6 +10,7 @@
 #include <chrono>
 #include <csignal>
 #include <cstdint>
+#include <ctime>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -141,8 +142,13 @@ int main(int argc, char **argv) {
 
   std::cout << "panel-runtime: rendering " << page << " every " << refreshMs << "ms" << std::endl;
 
+  long previousNow = 0;
   while (running) {
-    panel.Update();
+    const long now = static_cast<long>(std::time(nullptr));
+    const long deltaSeconds = previousNow == 0 ? 0 : now - previousNow;
+    previousNow = now;
+
+    panel.Update(now, deltaSeconds);
     raster.Clear();
     panel.Draw();
     raster.Save(outPath.c_str());

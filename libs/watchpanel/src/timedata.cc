@@ -55,20 +55,21 @@ wpp::TimeData::TimeData() : DataImport("time") {}
 
 wpp::TimeData::~TimeData() {}
 
-void wpp::TimeData::Pull(const Model &model, rapidjson::Document &out) {
-    std::time_t t = std::time(0);
-    std::tm* now = std::localtime(&t);
+void wpp::TimeData::Pull(const Model &model, rapidjson::Document &out, long now, long deltaSeconds) {
+    (void)deltaSeconds;
+    std::time_t t = static_cast<std::time_t>(now);
+    std::tm* localNow = std::localtime(&t);
     char value[16];
-    std::strftime(value, 3, "%H", now);
+    std::strftime(value, 3, "%H", localNow);
     SetValueByPointer(out, "/hh", value);
-    std::strftime(value, 3, "%M", now);
+    std::strftime(value, 3, "%M", localNow);
     SetValueByPointer(out, "/MM", value);
-    
-    int hour = now->tm_hour;
+
+    int hour = localNow->tm_hour;
     bool pm = hour > 11;
     if (pm) {
         hour = hour - 12;
-    }    int minute = now->tm_min;
+    }    int minute = localNow->tm_min;
 
     SetValueByPointer(out, "/whour", words_hours12[hour]);
 

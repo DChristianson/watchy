@@ -1,6 +1,7 @@
 #include "watchpanel/watchpanel.h"
 #include "watchpanel/terminal_raster.h"
 
+#include <ctime>
 #include <iostream>
 #include <string>
 
@@ -22,7 +23,8 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  wp.Update();
+  const long now = static_cast<long>(std::time(nullptr));
+  wp.Update(now, 0);
   wp.Draw();
   std::cout << raster.Render() << std::endl;
   return 0;

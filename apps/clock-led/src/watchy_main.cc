@@ -5,6 +5,7 @@
 #include <chrono>
 #include <csignal>
 #include <cstdint>
+#include <ctime>
 #include <iostream>
 #include <string>
 #include <thread>
@@ -80,8 +81,13 @@ int main(int argc, char **argv) {
   });
 #endif
 
+  long previousNow = 0;
   while (running) {
-    panel.Update();
+    const long now = static_cast<long>(std::time(nullptr));
+    const long deltaSeconds = previousNow == 0 ? 0 : now - previousNow;
+    previousNow = now;
+
+    panel.Update(now, deltaSeconds);
     raster.Clear();
     panel.Draw();
     raster.Flush();

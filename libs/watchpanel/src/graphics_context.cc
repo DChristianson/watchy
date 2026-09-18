@@ -4,6 +4,7 @@
 #include "hamper.h"
 
 #include <algorithm>
+#include <ctime>
 #include <sstream>
 
 namespace wpp = watchpanel;
@@ -193,9 +194,15 @@ void wpp::GraphicsContext::DrawImage(
     // per maxAgeSeconds, and a failed refresh still falls back to
     // whatever was last fetched successfully rather than failing here.
     // Local paths are used as-is.
+    //
+    // Draw() (unlike Update()) doesn't carry an injected timestamp through
+    // its call chain, so this is the one remaining real std::time() read
+    // in the pipeline -- everything time-related that happens during
+    // Update() (feed fetches, TimeData, flip timing) is fully injectable.
     std::string localPath = hrefStr;
     if (isRemote) {
-        localPath = hamper::fetch_image(hrefStr.c_str(), maxAgeSeconds, cacheDir.c_str());
+        const long now = static_cast<long>(std::time(nullptr));
+        localPath = hamper::fetch_image(hrefStr.c_str(), now, maxAgeSeconds, cacheDir.c_str());
     }
 
     // Decode the real image (PNG/JPEG via stb_image) and nearest-neighbor

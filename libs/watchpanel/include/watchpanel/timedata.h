@@ -11,7 +11,7 @@ namespace watchpanel {
         TimeData();
         ~TimeData();
     
-        void Pull(const Model &model, rapidjson::Document &out);
+        void Pull(const Model &model, rapidjson::Document &out, long now, long deltaSeconds);
 
     };
 

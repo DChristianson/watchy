@@ -81,7 +81,7 @@ int main() {
     std::remove(generatedPath.c_str());
     Check(loadResult == 0, "weather_test.xml loads");
 
-    page.Update();
+    page.Update(1000000, 0);
     page.Draw();
 
     // --- Image: real dimension-aware letterboxing ---

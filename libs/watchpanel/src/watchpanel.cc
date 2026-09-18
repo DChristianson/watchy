@@ -5,7 +5,6 @@
 
 #include <stdlib.h>
 #include <iostream>
-#include <ctime>
 
 namespace watchpanel {
 
@@ -31,14 +30,17 @@ namespace watchpanel {
     const char * _NAME_ = "name";
     const char * _HREF_ = "href";
     const char * _TTL_ = "ttl";
+    const char * _FLIP_ = "flip";
+    const char * _PATH_ = "path";
+    const char * _PERIOD_ = "period";
 
     int ParseInt(const char * str, int defaultValue = 0) {
         return atoi(str);
     }
 
-    // Parses a ttl="PT15M"-style ISO-8601 duration attribute, falling back
-    // to defaultSeconds if the attribute is absent or malformed.
-    long ParseTtlSeconds(const char * iso, long defaultSeconds) {
+    // Parses a ttl="PT15M"/period="PT5S"-style ISO-8601 duration attribute,
+    // falling back to defaultSeconds if the attribute is absent or malformed.
+    long ParseDurationSeconds(const char * iso, long defaultSeconds) {
         long seconds = 0;
         if (iso != NULL && iso[0] != 0 && ParseIsoDuration(iso, &seconds)) {
             return seconds;
@@ -89,7 +91,7 @@ int wpp::WatchPage::Load(const char *path)
             const char *feedName = data_item.attribute(_NAME_).value();
             const char *href = data_item.attribute(_HREF_).value();
             const char *ttl = data_item.attribute(_TTL_).value();
-            long maxAgeSeconds = ParseTtlSeconds(ttl, 15 * 60);
+            long maxAgeSeconds = ParseDurationSeconds(ttl, 15 * 60);
             import = new FeedData(feedName, href, maxAgeSeconds, cacheDir.c_str());
             if (FormattedString::IsTemplatized(href)) {
                 import->AddUpdate(
@@ -151,7 +153,7 @@ int wpp::WatchPage::Load(const char *path)
             int height = ParseInt(graphic_item.attribute(_HEIGHT_).value());
             const char * href = graphic_item.attribute(_HREF_).value();
             const char * ttl = graphic_item.attribute(_TTL_).value();
-            long imageMaxAgeSeconds = ParseTtlSeconds(ttl, 24 * 60 * 60);
+            long imageMaxAgeSeconds = ParseDurationSeconds(ttl, 24 * 60 * 60);
             graphic = new ImageGraphic(context, x, y, width, height, href, imageMaxAgeSeconds);
             if (FormattedString::IsTemplatized(href)) {
                 updateList.push_back(
@@ -174,6 +176,41 @@ int wpp::WatchPage::Load(const char *path)
             Color stroke = Color::Parse(strokeName);
 
             graphic = new RectGraphic(context, x, y, width, height, fill, stroke);
+
+        } else if (strcmp(name, _FLIP_) == 0) {
+            // FLIP graphic: cycles through the elements of the array at
+            // `path`, re-scoping its children's relative template paths to
+            // whichever item is currently showing.
+            const char * fontName = graphic_item.attribute(_FONT_).value();
+            const char * colorName = graphic_item.attribute(_COLOR_).value();
+            Color color = Color::Parse(colorName);
+            int x = ParseInt(graphic_item.attribute(_X_).value());
+            int y = ParseInt(graphic_item.attribute(_Y_).value());
+            int flip_width = ParseInt(graphic_item.attribute(_WIDTH_).value());
+            int flip_height = ParseInt(graphic_item.attribute(_HEIGHT_).value());
+            int letter_spacing = ParseInt(graphic_item.attribute(_LETTER_SPACING_).value(), 1);
+            int line_offset = ParseInt(graphic_item.attribute(_LINE_OFFSET_).value(), 0);
+            const char * wrapName = graphic_item.attribute(_WRAP_).value();
+            Wrap wrap = (strcmp(wrapName, "word") == 0) ? Wrap::kWord : Wrap::kNone;
+            const char * overflowName = graphic_item.attribute(_OVERFLOW_).value();
+            Overflow overflow = (strcmp(overflowName, "clip") == 0) ? Overflow::kClip : Overflow::kVisible;
+            const char * itemsPath = graphic_item.attribute(_PATH_).value();
+            const char * periodIso = graphic_item.attribute(_PERIOD_).value();
+            long periodSeconds = ParseDurationSeconds(periodIso, 5);
+
+            FlipGraphic * flip = new FlipGraphic(context, fontName, color, x, y, flip_width, flip_height,
+                                                  letter_spacing, line_offset, wrap, overflow,
+                                                  itemsPath, periodSeconds);
+            graphic = flip;
+            flipUpdates.push_back(flip);
+
+            for (pugi::xml_node span = graphic_item.child("tspan"); span; span = span.next_sibling("tspan")) {
+                const char * text = span.child_value();
+                TextSpan * textSpan = &(flip->AppendText(text));
+                if (FormattedString::IsTemplatized(text)) {
+                    flip->AddChildUpdate(new UpdateFormattedString(text, [textSpan] (const char* v) { textSpan->text = v; }));
+                }
+            }
 
         } else {
             // UNKNOWN graphic
@@ -200,21 +237,25 @@ void wpp::WatchPage::LoadText(const char *text, TextGraphic *textGraphic) {
 
 }
 
-void wpp::WatchPage::Update() {
+void wpp::WatchPage::Update(long now, long deltaSeconds) {
 
     rapidjson::Document root(rapidjson::kObjectType);
     auto model = DocumentModel(root);
     for (auto d : dataList) {
-        d->Update(model);
+        d->Update(model, now, deltaSeconds);
         rapidjson::Document out(rapidjson::kObjectType);
-        d->Pull(model, out);
+        d->Pull(model, out, now, deltaSeconds);
         rapidjson::Value subtree(rapidjson::kObjectType);
         subtree.CopyFrom(out, root.GetAllocator());
         root.AddMember(rapidjson::StringRef(d->GetName()), subtree, root.GetAllocator());
     }
 
     for (auto u : updateList) {
-        u->Update(model);
+        u->Update(model, now, deltaSeconds);
+    }
+
+    for (auto f : flipUpdates) {
+        f->Update(model, now, deltaSeconds);
     }
 
 }
@@ -246,7 +287,10 @@ void wpp::WatchPage::Clear() {
         delete g;
     }
     displayList.clear();
-    
+
+    // Non-owning aliases into displayList -- already deleted above.
+    flipUpdates.clear();
+
     errors.clear();
 }
 
@@ -293,20 +337,19 @@ void wpp::WatchPanel::Clear() {
     lastPageFlip = 0;
 }
 
-void wpp::WatchPanel::Update() {
+void wpp::WatchPanel::Update(long now, long deltaSeconds) {
     if (pageList.empty()) {
         return;
     }
 
-    const long now = static_cast<long>(std::time(nullptr));
     if (lastUpdate == 0 || now - lastUpdate >= updateInterval) {
-        pageList[currentPage]->Update();
+        pageList[currentPage]->Update(now, deltaSeconds);
         lastUpdate = now;
     }
 
     if (pageList.size() > 1 && (lastPageFlip == 0 || now - lastPageFlip >= pageInterval)) {
         currentPage = (currentPage + 1) % static_cast<int>(pageList.size());
-        pageList[currentPage]->Update();
+        pageList[currentPage]->Update(now, deltaSeconds);
         lastPageFlip = now;
     }
 }

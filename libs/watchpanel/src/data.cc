@@ -25,20 +25,20 @@ void wpp::DataImport::AddUpdate(Updateable *update) {
     updateList.push_back(update);
 }
 
-void wpp::DataImport::Update(const Model &model) {
+void wpp::DataImport::Update(const Model &model, long now, long deltaSeconds) {
     for (auto u : updateList)
     {
-        u->Update(model);
+        u->Update(model, now, deltaSeconds);
     }
 }
 
-void wpp::DataImport::Pull(const Model &model, rapidjson::Document &out) {}
+void wpp::DataImport::Pull(const Model &model, rapidjson::Document &out, long now, long deltaSeconds) {}
 
 wpp::ConfigData::ConfigData(const char *name, const char *path) : DataImport(name), path(path) {}
 
 wpp::ConfigData::~ConfigData() {}
 
-void wpp::ConfigData::Pull(const Model &model, rapidjson::Document &out) {
+void wpp::ConfigData::Pull(const Model &model, rapidjson::Document &out, long now, long deltaSeconds) {
     // TODO: cache everything
     std::cout << "Loading " << path.c_str() << std::endl;
     auto pagefile = fopen(path.c_str(), "rb");
@@ -62,7 +62,7 @@ wpp::JsonFileData::JsonFileData(const char *name, const char *path) : DataImport
 
 wpp::JsonFileData::~JsonFileData() {}
 
-void wpp::JsonFileData::Pull(const Model &model, rapidjson::Document &out) {
+void wpp::JsonFileData::Pull(const Model &model, rapidjson::Document &out, long now, long deltaSeconds) {
     std::cout << "Loading " << path.c_str() << std::endl;
     auto pagefile = fopen(path.c_str(), "rb");
     if (pagefile == NULL) {
@@ -90,9 +90,10 @@ void wpp::FeedData::SetHRef(const char *value) {
     href = value;
 }
 
-void wpp::FeedData::Pull(const Model &model, rapidjson::Document &out) {
+void wpp::FeedData::Pull(const Model &model, rapidjson::Document &out, long now, long deltaSeconds) {
+    (void)deltaSeconds;
     std::cout << "Fetching " << href.c_str() << std::endl;
-    int res = hamper::fetch_url(href.c_str(), out, maxAgeSeconds, cacheDir.c_str());
+    int res = hamper::fetch_url(href.c_str(), out, now, maxAgeSeconds, cacheDir.c_str());
     if (0 != res) {
         std::cerr << "Warning: fetch failed for " << href.c_str() << " with no cached data to fall back to" << std::endl;
         out.SetObject();

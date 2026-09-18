@@ -177,3 +177,11 @@ target_link_libraries(weather_page_test PRIVATE watchpanel_lib)
 
 add_test(NAME weather_page_test COMMAND weather_page_test)
 set_tests_properties(weather_page_test PROPERTIES WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+
+add_executable(flip_test
+  tests/flip_test.cc
+)
+target_link_libraries(flip_test PRIVATE watchpanel_lib)
+
+add_test(NAME flip_test COMMAND flip_test)
+set_tests_properties(flip_test PROPERTIES WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")

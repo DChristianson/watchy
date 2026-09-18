@@ -3,10 +3,11 @@
         <feed name="news" href="http://feeds.bbci.co.uk/news/rss.xml" format="rss"/>
     </data>
     <display>
-        <text x="0" y="0" width="64" height="64" wrap="word" overflow="clip" font="tom-thumb" color="white">
-            <tspan>{/news/channel/items/0/title}</tspan>
-            <tspan>{/news/channel/items/0/description}</tspan>
-            <tspan>{/news/channel/items/0/pubDate}</tspan>
-        </text>
+        <flip x="0" y="0" width="64" height="64" wrap="word" overflow="clip" font="tom-thumb" color="white"
+              path="/news/channel/items" period="PT8S">
+            <tspan>{title}</tspan>
+            <tspan>{description}</tspan>
+            <tspan>{pubDate}</tspan>
+        </flip>
     </display>
 </page>

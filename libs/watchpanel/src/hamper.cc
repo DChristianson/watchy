@@ -5,11 +5,11 @@
 #include "rapidjson/error/en.h"
 
 #include <sys/stat.h>
+#include <sys/time.h>
 
 #include <cerrno>
 #include <cstdint>
 #include <cstdio>
-#include <ctime>
 #include <iostream>
 #include <mutex>
 
@@ -47,12 +47,24 @@ bool EnsureDirExists(const std::string &dir) {
     return errno == EEXIST;
 }
 
-// Age of a file in seconds, or -1 if it doesn't exist / can't be stat'd.
-long FileAgeSeconds(const std::string &path) {
+// Age of a file in seconds relative to `now`, or -1 if it doesn't exist /
+// can't be stat'd. `now` is caller-supplied so this is deterministic.
+long FileAgeSeconds(const std::string &path, long now) {
     struct stat st;
     if (stat(path.c_str(), &st) != 0) return -1;
-    const long now = static_cast<long>(std::time(nullptr));
     return now - static_cast<long>(st.st_mtime);
+}
+
+// Stamps a file's mtime with `timestamp` instead of leaving it to whatever
+// the OS's real clock assigned on write -- this is what makes FileAgeSeconds
+// fully deterministic under a fixed sequence of caller-supplied `now`
+// values, with no dependency on real wall-clock time at all.
+void SetFileTimestamp(const std::string &path, long timestamp) {
+    struct timeval times[2];
+    times[0].tv_sec = timestamp;
+    times[0].tv_usec = 0;
+    times[1] = times[0];
+    utimes(path.c_str(), times);
 }
 
 bool FetchUrlToFile(const char *url, const std::string &destPath) {
@@ -97,7 +109,7 @@ bool FetchUrlToFile(const char *url, const std::string &destPath) {
 
 }  // namespace
 
-std::string FetchToCache(const char *url, long maxAgeSeconds, const char *cacheDir) {
+std::string FetchToCache(const char *url, long now, long maxAgeSeconds, const char *cacheDir) {
     const std::string dir(cacheDir);
     if (!EnsureDirExists(dir)) {
         std::cerr << "hamper: could not create cache directory " << dir << std::endl;
@@ -105,13 +117,14 @@ std::string FetchToCache(const char *url, long maxAgeSeconds, const char *cacheD
     }
 
     const std::string path = dir + "/" + CacheKeyForUrl(url) + ".cache";
-    const long age = FileAgeSeconds(path);
+    const long age = FileAgeSeconds(path, now);
 
     if (age >= 0 && age < maxAgeSeconds) {
         return path;  // fresh enough -- no network hit
     }
 
     if (FetchUrlToFile(url, path)) {
+        SetFileTimestamp(path, now);
         return path;
     }
 
@@ -126,8 +139,8 @@ std::string FetchToCache(const char *url, long maxAgeSeconds, const char *cacheD
     return "";
 }
 
-int fetch_url(const char *url, rapidjson::Document &d, long maxAgeSeconds, const char *cacheDir) {
-    const std::string path = FetchToCache(url, maxAgeSeconds, cacheDir);
+int fetch_url(const char *url, rapidjson::Document &d, long now, long maxAgeSeconds, const char *cacheDir) {
+    const std::string path = FetchToCache(url, now, maxAgeSeconds, cacheDir);
     if (path.empty()) {
         d.SetObject();
         return -1;
@@ -154,8 +167,8 @@ int fetch_url(const char *url, rapidjson::Document &d, long maxAgeSeconds, const
     return 0;
 }
 
-std::string fetch_image(const char *url, long maxAgeSeconds, const char *cacheDir) {
-    return FetchToCache(url, maxAgeSeconds, cacheDir);
+std::string fetch_image(const char *url, long now, long maxAgeSeconds, const char *cacheDir) {
+    return FetchToCache(url, now, maxAgeSeconds, cacheDir);
 }
 
 }  // namespace hamper

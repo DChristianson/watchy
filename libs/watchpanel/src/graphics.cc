@@ -1,5 +1,6 @@
 #include "graphics.h"
 #include "graphics_context.h"
+#include "model.h"
 #include <cstdio>
 #include <map>
 #include <iostream>
@@ -203,3 +204,73 @@ void wpp::RectGraphic::Draw()
 }
 
 wpp::RectGraphic::~RectGraphic() {}
+
+wpp::FlipGraphic::FlipGraphic(
+    GraphicsContext * context,
+    const char *fontName,
+    Color color,
+    int x,
+    int y,
+    int width,
+    int height,
+    int letterSpacing,
+    int lineOffset,
+    Wrap wrap,
+    Overflow overflow,
+    const char *itemsPath,
+    long periodSeconds
+) : Graphic(context),
+    inner(new TextGraphic(context, fontName, color, x, y, width, height, letterSpacing, lineOffset, wrap, overflow)),
+    itemsPath(itemsPath),
+    periodSeconds(periodSeconds),
+    currentIndex(0),
+    lastFlipTime(0),
+    hasFlippedOnce(false)
+{}
+
+wpp::FlipGraphic::~FlipGraphic() {
+    delete inner;
+    for (auto u : childUpdates) {
+        delete u;
+    }
+}
+
+wpp::TextSpan &wpp::FlipGraphic::AppendText(const char *text) {
+    return inner->AppendText(text);
+}
+
+void wpp::FlipGraphic::AddChildUpdate(Updateable *update) {
+    childUpdates.push_back(update);
+}
+
+void wpp::FlipGraphic::Update(const Model &model, long now, long deltaSeconds) {
+    const int itemCount = model.GetArraySize(itemsPath.c_str());
+
+    if (itemCount <= 0) {
+        currentIndex = 0;
+        return;
+    }
+    if (currentIndex >= itemCount) {
+        currentIndex = 0;  // items array shrank out from under us
+    }
+
+    if (!hasFlippedOnce) {
+        // Show the first item immediately rather than waiting a full
+        // period before anything appears.
+        lastFlipTime = now;
+        hasFlippedOnce = true;
+    } else if (now - lastFlipTime >= periodSeconds) {
+        currentIndex = (currentIndex + 1) % itemCount;
+        lastFlipTime = now;
+    }
+
+    const std::string scopedBase = itemsPath + "/" + std::to_string(currentIndex);
+    ScopedModel scoped(model, scopedBase);
+    for (auto u : childUpdates) {
+        u->Update(scoped, now, deltaSeconds);
+    }
+}
+
+void wpp::FlipGraphic::Draw() {
+    inner->Draw();
+}

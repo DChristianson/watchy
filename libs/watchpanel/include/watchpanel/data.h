@@ -10,7 +10,7 @@ namespace watchpanel {
 
     class DataImport {
     private:
-    
+
         std::string name;
         std::vector<Updateable *> updateList;
 
@@ -18,10 +18,10 @@ namespace watchpanel {
 
         DataImport(const char *name);
         virtual ~DataImport();
-        
-        virtual void Update(const Model &model);
 
-        virtual void Pull(const Model &model, rapidjson::Document &out);
+        virtual void Update(const Model &model, long now, long deltaSeconds);
+
+        virtual void Pull(const Model &model, rapidjson::Document &out, long now, long deltaSeconds);
 
         void AddUpdate(Updateable *update);
 
@@ -33,13 +33,13 @@ namespace watchpanel {
     private:
 
         std::string path;
-    
+
     public:
 
         ConfigData(const char *packageName, const char *path);
         ~ConfigData();
-    
-        void Pull(const Model &model, rapidjson::Document &out);
+
+        void Pull(const Model &model, rapidjson::Document &out, long now, long deltaSeconds);
 
     };
 
@@ -53,7 +53,7 @@ namespace watchpanel {
         JsonFileData(const char *name, const char *path);
         ~JsonFileData();
 
-        void Pull(const Model &model, rapidjson::Document &out);
+        void Pull(const Model &model, rapidjson::Document &out, long now, long deltaSeconds);
 
     };
 
@@ -72,7 +72,7 @@ namespace watchpanel {
 
         void SetHRef(const char *href);
 
-        void Pull(const Model &model, rapidjson::Document &out);
+        void Pull(const Model &model, rapidjson::Document &out, long now, long deltaSeconds);
 
     };
 

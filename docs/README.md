@@ -58,6 +58,25 @@ Defaults: 15 minutes for feeds, 24 hours for images (an icon URL always
 points at the same static artwork, so caching it aggressively is free
 correctness, not staleness risk).
 
+`<flip>` is a text box (same `x`/`y`/`width`/`height`/`wrap`/`overflow`/
+`font`/`color`/`letter-spacing`/`line-offset` as `<text>`) that cycles
+through the elements of a JSON array over time instead of showing fixed
+content:
+
+```xml
+<flip x="0" y="0" width="64" height="64" wrap="word" overflow="clip"
+      font="tom-thumb" color="white"
+      path="/news/channel/items" period="PT8S">
+  <tspan>{title}</tspan>
+  <tspan>{description}</tspan>
+</flip>
+```
+
+- `path`: a JSON pointer to the array to cycle through.
+- `period`: an ISO-8601 duration (same format as `ttl`) for how long each item shows before advancing. Default 5 seconds.
+- Inside a `<flip>`, a template path that **doesn't** start with `/` is relative to the currently-showing item (`{title}` above resolves against `path`'s current element) — an absolute path (`{/time/hh}`) still reaches anywhere in the document, unaffected by which item is showing.
+- The first item shows immediately; if the array shrinks so the current index is out of range, it clamps back to item 0 rather than erroring.
+
 ## Fetch caching
 All remote fetches (JSON feeds and images) go through `hamper`'s local
 cache (`cache/` at the repo root by default — configurable via the
@@ -67,6 +86,20 @@ gitignored). A cache entry is only replaced by a *successful* fetch —
 network or a rate-limited API degrades to "showing slightly old data"
 rather than a blank panel. Only a URL that has never been fetched
 successfully at all (nothing to fall back to) results in a real failure.
+
+## Deterministic time
+`WatchPage`/`WatchPanel`/`DataImport`/`Updateable`'s `Update()` all take
+`(now, deltaSeconds)` explicitly rather than reading the system clock
+themselves. Each component applies its own policy against these (a feed
+decides whether to refetch, `FlipGraphic` decides whether to advance,
+`TimeData` derives the displayed clock from `now` directly) — nothing in
+the update path reads `std::time()` internally. Only the real apps'
+main loops read the actual system clock (once per iteration) and pass it
+down; this is what makes the whole update pipeline testable with fixed,
+hand-picked timestamps instead of real sleeps (see `flip_test.cc`,
+`hamper_cache_test.cc`). `Draw()` is unaffected by this — image fetching
+that happens during `GraphicsContext::DrawImage` still reads the real
+clock directly, since draw-time isn't part of this change.
 
 ## Running on the Raspberry Pi (real LED hardware)
 `clock-led` runs the same WatchPanel/LedRaster pipeline as the other apps, but

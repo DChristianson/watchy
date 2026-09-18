@@ -1,17 +1,19 @@
 #include "update.h"
 #include <iostream>
 
-namespace wpp = watchpanel; 
+namespace wpp = watchpanel;
 
 wpp::Updateable::~Updateable() {}
-        
+
 wpp::UpdateFormattedString::UpdateFormattedString(const char *text, std::function<void(const char *)> setter)
     : formatter(text), setter(setter) {
 }
 
 wpp::UpdateFormattedString::~UpdateFormattedString() {}
 
-void wpp::UpdateFormattedString::Update(const Model &lookup) {
+void wpp::UpdateFormattedString::Update(const Model &lookup, long now, long deltaSeconds) {
+    (void)now;
+    (void)deltaSeconds;
     std::string buffer;
     formatter.Format(lookup, buffer);
     std::cout << "new value: " << buffer << std::endl;

@@ -18,6 +18,10 @@ namespace watchpanel {
         std::vector<DataImport *> dataList;
         std::vector<Updateable *> updateList;
         std::vector<Graphic *> displayList;
+        // Non-owning aliases into displayList (FlipGraphic instances,
+        // which are also Updateable) -- displayList's Clear() owns and
+        // deletes the actual objects.
+        std::vector<Updateable *> flipUpdates;
 
         GraphicsContext *context;
         std::string configPath;
@@ -37,7 +41,7 @@ namespace watchpanel {
         int Load(const char * path);
         void Clear();
 
-        void Update();
+        void Update(long now, long deltaSeconds);
         void Draw();
 
     };
@@ -67,7 +71,7 @@ namespace watchpanel {
         int Load(const char * path);
         void Clear();
 
-        void Update();
+        void Update(long now, long deltaSeconds);
         void Draw();
 
     };
