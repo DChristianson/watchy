@@ -30,6 +30,7 @@ namespace watchpanel {
     const char * _NAME_ = "name";
     const char * _HREF_ = "href";
     const char * _TTL_ = "ttl";
+    const char * _FORMAT_ = "format";
     const char * _FLIP_ = "flip";
     const char * _PATH_ = "path";
     const char * _PERIOD_ = "period";
@@ -92,7 +93,9 @@ int wpp::WatchPage::Load(const char *path)
             const char *href = data_item.attribute(_HREF_).value();
             const char *ttl = data_item.attribute(_TTL_).value();
             long maxAgeSeconds = ParseDurationSeconds(ttl, 15 * 60);
-            import = new FeedData(feedName, href, maxAgeSeconds, cacheDir.c_str());
+            const char *format = data_item.attribute(_FORMAT_).value();
+            import = new FeedData(feedName, href, maxAgeSeconds, cacheDir.c_str(),
+                                   (format != NULL && format[0] != 0) ? format : "json");
             if (FormattedString::IsTemplatized(href)) {
                 import->AddUpdate(
                     new UpdateFormattedString(

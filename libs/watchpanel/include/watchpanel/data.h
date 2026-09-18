@@ -63,11 +63,13 @@ namespace watchpanel {
         std::string href;
         long maxAgeSeconds;
         std::string cacheDir;
+        std::string format;
 
     public:
 
         FeedData(const char *name, const char *href,
-                 long maxAgeSeconds = 15 * 60, const char *cacheDir = "cache");
+                 long maxAgeSeconds = 15 * 60, const char *cacheDir = "cache",
+                 const char *format = "json");
         ~FeedData();
 
         void SetHRef(const char *href);

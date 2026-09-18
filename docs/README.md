@@ -58,6 +58,18 @@ Defaults: 15 minutes for feeds, 24 hours for images (an icon URL always
 points at the same static artwork, so caching it aggressively is free
 correctness, not staleness risk).
 
+`<feed>` also supports `format="rss"` for real RSS 2.0 feeds (e.g. BBC's
+`http://feeds.bbci.co.uk/news/rss.xml`), which is what `news.xml` uses.
+Without it, a feed's response is always parsed as JSON. RSS is converted
+into the same JSON shape as any other feed, generically by tag name --
+`<channel><item><title>...` becomes `/<feed-name>/channel/items/0/title`,
+and this works for whatever fields a given feed's `<item>`s happen to have,
+not just title/description/pubDate/link:
+
+```xml
+<feed name="news" href="http://feeds.bbci.co.uk/news/rss.xml" format="rss"/>
+```
+
 `<flip>` is a text box (same `x`/`y`/`width`/`height`/`wrap`/`overflow`/
 `font`/`color`/`letter-spacing`/`line-offset` as `<text>`) that cycles
 through the elements of a JSON array over time instead of showing fixed

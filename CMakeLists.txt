@@ -40,6 +40,7 @@ add_library(watchpanel_lib
   libs/watchpanel/src/graphics_context.cc
   libs/watchpanel/src/raster.cc
   libs/watchpanel/src/iso_duration.cc
+  libs/watchpanel/src/rss.cc
   libs/watchpanel/src/strings.cc
   libs/watchpanel/src/update.cc
   libs/watchpanel/src/data.cc
@@ -185,3 +186,11 @@ target_link_libraries(flip_test PRIVATE watchpanel_lib)
 
 add_test(NAME flip_test COMMAND flip_test)
 set_tests_properties(flip_test PROPERTIES WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+
+add_executable(rss_test
+  tests/rss_test.cc
+)
+target_link_libraries(rss_test PRIVATE watchpanel_lib)
+
+add_test(NAME rss_test COMMAND rss_test)
+set_tests_properties(rss_test PROPERTIES WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")

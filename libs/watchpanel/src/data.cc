@@ -1,6 +1,7 @@
 #include "data.h"
 
 #include "hamper.h"
+#include "rss.h"
 #include "rapidjson/pointer.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/filereadstream.h"
@@ -81,8 +82,10 @@ void wpp::JsonFileData::Pull(const Model &model, rapidjson::Document &out, long 
     }
 }
 
-wpp::FeedData::FeedData(const char *name, const char *href, long maxAgeSeconds, const char *cacheDir)
-    : DataImport(name), href(href), maxAgeSeconds(maxAgeSeconds), cacheDir(cacheDir) {}
+wpp::FeedData::FeedData(const char *name, const char *href, long maxAgeSeconds, const char *cacheDir,
+                        const char *format)
+    : DataImport(name), href(href), maxAgeSeconds(maxAgeSeconds), cacheDir(cacheDir),
+      format(format ? format : "json") {}
 
 wpp::FeedData::~FeedData() {}
 
@@ -93,6 +96,17 @@ void wpp::FeedData::SetHRef(const char *value) {
 void wpp::FeedData::Pull(const Model &model, rapidjson::Document &out, long now, long deltaSeconds) {
     (void)deltaSeconds;
     std::cout << "Fetching " << href.c_str() << std::endl;
+
+    if (format == "rss") {
+        const std::string path = hamper::FetchToCache(href.c_str(), now, maxAgeSeconds, cacheDir.c_str());
+        if (path.empty() || !ParseRssFile(path, out)) {
+            std::cerr << "Warning: fetch/parse failed for " << href.c_str()
+                      << " with no cached data to fall back to" << std::endl;
+            out.SetObject();
+        }
+        return;
+    }
+
     int res = hamper::fetch_url(href.c_str(), out, now, maxAgeSeconds, cacheDir.c_str());
     if (0 != res) {
         std::cerr << "Warning: fetch failed for " << href.c_str() << " with no cached data to fall back to" << std::endl;

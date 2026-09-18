@@ -86,6 +86,11 @@ bool FetchUrlToFile(const char *url, const std::string &destPath) {
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
     curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 1L);
+    // Without this, a server that redirects (e.g. http:// -> https://,
+    // common for real feeds) yields an empty body instead of the actual
+    // content -- curl doesn't follow redirects unless told to.
+    curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+    curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 5L);
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteData);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, file);
 

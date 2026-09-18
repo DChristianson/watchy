@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+    <channel>
+        <title><![CDATA[Sample Feed]]></title>
+        <description><![CDATA[A synthetic RSS fixture for testing, not real news content]]></description>
+        <link>https://example.invalid/feed</link>
+        <item>
+            <title><![CDATA[First headline]]></title>
+            <description><![CDATA[Description of the first item]]></description>
+            <link>https://example.invalid/1</link>
+            <pubDate>Mon, 01 Jan 2024 00:00:00 GMT</pubDate>
+        </item>
+        <item>
+            <title><![CDATA[Second headline]]></title>
+            <description><![CDATA[Description of the second item]]></description>
+            <link>https://example.invalid/2</link>
+            <pubDate>Tue, 02 Jan 2024 00:00:00 GMT</pubDate>
+        </item>
+    </channel>
+</rss>
