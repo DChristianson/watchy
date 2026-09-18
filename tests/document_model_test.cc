@@ -99,6 +99,39 @@ int main() {
     mixed.Format(model, mixedResult);
     CheckEq(mixedResult, "Seattle then  end", "unresolved placeholder doesn't reuse a prior value");
 
+    // --- Precision spec: {path:N} rounds a numeric value to N decimal
+    // places instead of the raw std::to_string(double) output.
+    // /main/temp is 288.19 -> rounds down to "288" at :0.
+    // /main/temp_max is 289.78 -> rounds UP to "290" at :0 (real rounding,
+    // not truncation -- checked explicitly since that's the whole point).
+    FormattedString roundedTemp("{/main/temp:0}");
+    std::string roundedTempResult;
+    roundedTemp.Format(model, roundedTempResult);
+    CheckEq(roundedTempResult, "288", "precision :0 rounds 288.19 down to 288");
+
+    FormattedString roundedMax("{/main/temp_max:0}");
+    std::string roundedMaxResult;
+    roundedMax.Format(model, roundedMaxResult);
+    CheckEq(roundedMaxResult, "290", "precision :0 rounds 289.78 up to 290");
+
+    FormattedString onePlace("{/main/temp:1}");
+    std::string onePlaceResult;
+    onePlace.Format(model, onePlaceResult);
+    CheckEq(onePlaceResult, "288.2", "precision :1 rounds 288.19 to one decimal place");
+
+    // A precision spec on a non-numeric field is harmless -- passes the
+    // raw value through unchanged rather than erroring.
+    FormattedString notNumeric("{/name:0}");
+    std::string notNumericResult;
+    notNumeric.Format(model, notNumericResult);
+    CheckEq(notNumericResult, "Seattle", "precision spec on a string field is a harmless no-op");
+
+    // No precision spec at all: unchanged from existing behavior.
+    FormattedString noSpec("{/main/temp}");
+    std::string noSpecResult;
+    noSpec.Format(model, noSpecResult);
+    CheckEq(noSpecResult, "288.190000", "omitting the precision spec keeps today's behavior exactly");
+
     if (failures == 0) {
         std::cout << "OK (DocumentModel/FormattedString checks passed)" << std::endl;
         return 0;
