@@ -19,7 +19,16 @@ namespace watchpanel {
         explicit GraphicsContext(Raster *raster, const std::string &fontPath = "fonts/tom-thumb.bdf",
                                   const std::string &cacheDir = "cache");
 
-        void DrawText(
+        // Returns the total pixel height of the laid-out text (line count *
+        // line spacing), regardless of how much of it actually fit in the
+        // box -- callers (e.g. FlipGraphic) use this to detect when content
+        // exceeds its box and how far it still needs to scroll.
+        //
+        // scrollOffsetY shifts the whole block up by that many pixels
+        // before drawing (e.g. for a vertical auto-scroll effect); passing
+        // it forces box-clipping regardless of `overflow`, since scrolled
+        // content leaving artifacts outside the box would look broken.
+        int DrawText(
             const TextSpan *textSpan,
             const char *fontName,
             Color color,
@@ -30,7 +39,8 @@ namespace watchpanel {
             int letterSpacing,
             int lineOffset,
             Wrap wrap,
-            Overflow overflow);
+            Overflow overflow,
+            int scrollOffsetY = 0);
 
         void DrawRect(
             int x,

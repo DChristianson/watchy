@@ -99,7 +99,7 @@ std::vector<std::string> wpp::GraphicsContext::WrapWords(
     return lines;
 }
 
-void wpp::GraphicsContext::DrawText(
+int wpp::GraphicsContext::DrawText(
     const TextSpan *textSpan,
     const char *fontName,
     Color color,
@@ -110,7 +110,8 @@ void wpp::GraphicsContext::DrawText(
     int letterSpacing,
     int lineOffset,
     Wrap wrap,
-    Overflow overflow)
+    Overflow overflow,
+    int scrollOffsetY)
 {
     (void)fontName;
 
@@ -146,10 +147,15 @@ void wpp::GraphicsContext::DrawText(
         fontAscent = maxGlyphHeight;
     }
     const int effectiveLineOffset = lineOffset > 0 ? lineOffset : maxGlyphHeight + 1;
+    const int contentHeight = static_cast<int>(lines.size()) * effectiveLineOffset;
 
-    const ClipBox clip{overflow == Overflow::kClip && width > 0 && height > 0, x, y, width, height};
+    // A non-zero scroll offset needs the box to act as a clipping viewport
+    // even if the page didn't ask for overflow="clip" -- otherwise the
+    // lines scrolled above the box would still be drawn past its top edge.
+    const bool clipActive = (overflow == Overflow::kClip || scrollOffsetY != 0) && width > 0 && height > 0;
+    const ClipBox clip{clipActive, x, y, width, height};
 
-    int cursorY = y;
+    int cursorY = y - scrollOffsetY;
     for (const auto &line : lines) {
         if (clip.active && cursorY >= y + height) break;
         const int baselineY = cursorY + fontAscent;
@@ -161,6 +167,8 @@ void wpp::GraphicsContext::DrawText(
         }
         cursorY += effectiveLineOffset;
     }
+
+    return contentHeight;
 }
 
 void wpp::GraphicsContext::DrawRect(

@@ -4,7 +4,7 @@
     </data>
     <display>
         <flip x="0" y="0" width="64" height="64" wrap="word" overflow="clip" font="tom-thumb" color="white"
-              path="/news/channel/items" period="PT8S">
+              path="/news/channel/items" period="PT8S" scroll-speed="10">
             <tspan>{title}</tspan>
             <tspan>{description}</tspan>
             <tspan>{pubDate}</tspan>

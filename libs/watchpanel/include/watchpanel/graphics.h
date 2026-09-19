@@ -80,6 +80,8 @@ namespace watchpanel {
         int lineOffset;
         Wrap wrap;
         Overflow overflow;
+        int scrollOffsetY;
+        int lastContentHeight;
 
     public:
 
@@ -98,6 +100,16 @@ namespace watchpanel {
         ~TextGraphic();
 
         TextSpan &AppendText(const char *text);
+
+        // Shifts the drawn text up by this many pixels (see
+        // GraphicsContext::DrawText); used by FlipGraphic to implement
+        // vertical auto-scroll for content taller than its box.
+        void SetScrollOffset(int offsetY) { scrollOffsetY = offsetY; }
+
+        // Total pixel height of the text as laid out on the most recent
+        // Draw() call (0 before the first Draw()) -- lets a caller detect
+        // whether content exceeds its box.
+        int LastContentHeight() const { return lastContentHeight; }
 
         void Draw();
 
@@ -172,6 +184,9 @@ namespace watchpanel {
         int currentIndex;
         long lastFlipTime;
         bool hasFlippedOnce;
+        int height;
+        int scrollSpeedPxPerSec;
+        int scrollOffsetPx;
         std::vector<Updateable *> childUpdates;
 
     public:
@@ -189,7 +204,8 @@ namespace watchpanel {
             Wrap wrap,
             Overflow overflow,
             const char *itemsPath,
-            long periodSeconds
+            long periodSeconds,
+            int scrollSpeedPxPerSec = 0
         );
         ~FlipGraphic();
 

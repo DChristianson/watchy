@@ -105,6 +105,53 @@ int main() {
         ++failures;
     }
 
+    // --- DrawText's return value: total content height, and scrollOffsetY ---
+    //
+    // "Ap" is a single line; lineOffset=0 falls back to maxGlyphHeight(5)+1
+    // = 6, so DrawText should report a content height of 1 line * 6px = 6,
+    // regardless of whether that content actually fits in the box (there's
+    // no width/height box at all here -- unbounded).
+    watchy_test::FakeRaster measureRaster(8, 6);
+    GraphicsContext measureContext(&measureRaster, "fonts/tom-thumb.bdf");
+    TextSpan measureSpan("Ap");
+    const int contentHeight = measureContext.DrawText(
+        &measureSpan, "tom-thumb", Color(255, 255, 255),
+        /*x=*/0, /*y=*/0, /*width=*/0, /*height=*/0,
+        /*letterSpacing=*/1, /*lineOffset=*/0,
+        Wrap::kNone, Overflow::kVisible);
+    Check(contentHeight == 6, "DrawText reports content height (1 line * (maxGlyphHeight+1))");
+
+    // A non-zero scrollOffsetY shifts the whole block up by that many
+    // pixels and clips to the box (even though overflow=visible here) --
+    // scrolling "A" (rows 0-4) up by 2px should push its top two rows off
+    // the top of a 6-row box, leaving only its bottom 3 rows visible,
+    // while "p" (which starts 2px lower due to its descender) keeps one
+    // extra row visible at the bottom compared to the unscrolled render.
+    watchy_test::FakeRaster scrolledRaster(8, 6);
+    GraphicsContext scrolledContext(&scrolledRaster, "fonts/tom-thumb.bdf");
+    TextSpan scrolledSpan("Ap");
+    scrolledContext.DrawText(
+        &scrolledSpan, "tom-thumb", Color(255, 255, 255),
+        /*x=*/0, /*y=*/0, /*width=*/8, /*height=*/6,
+        /*letterSpacing=*/1, /*lineOffset=*/0,
+        Wrap::kNone, Overflow::kVisible, /*scrollOffsetY=*/2);
+
+    const std::vector<std::string> expectedScrolledRows = {
+        "***  * *",
+        "* *  * *",
+        "* *  ** ",
+        "     *  ",
+        "        ",
+        "        ",
+    };
+    const std::string expectedScrolled = Join(expectedScrolledRows);
+    const std::string actualScrolled = scrolledRaster.Render();
+    if (actualScrolled != expectedScrolled) {
+        std::cerr << "FAILED: scrolled \"Ap\" rendered mismatch\nGot:\n" << actualScrolled
+                  << "\n\nExpected:\n" << expectedScrolled << std::endl;
+        ++failures;
+    }
+
     if (failures == 0) {
         std::cout << "OK (" << "font+baseline checks passed)" << std::endl;
         return 0;

@@ -88,6 +88,7 @@ content:
 - `period`: an ISO-8601 duration (same format as `ttl`) for how long each item shows before advancing. Default 5 seconds.
 - Inside a `<flip>`, a template path that **doesn't** start with `/` is relative to the currently-showing item (`{title}` above resolves against `path`'s current element) — an absolute path (`{/time/hh}`) still reaches anywhere in the document, unaffected by which item is showing.
 - The first item shows immediately; if the array shrinks so the current index is out of range, it clamps back to item 0 rather than erroring.
+- `scroll-speed` (optional, default 0/off, pixels per second): when an item's rendered text is taller than the flip's `height`, it scrolls upward at this speed instead of clipping the overflow, stopping once fully revealed (it doesn't loop). Each new item starts scrolled back to the top.
 
 ## Fetch caching
 All remote fetches (JSON feeds and images) go through `hamper`'s local

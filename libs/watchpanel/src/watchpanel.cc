@@ -34,6 +34,7 @@ namespace watchpanel {
     const char * _FLIP_ = "flip";
     const char * _PATH_ = "path";
     const char * _PERIOD_ = "period";
+    const char * _SCROLL_SPEED_ = "scroll-speed";
 
     int ParseInt(const char * str, int defaultValue = 0) {
         return atoi(str);
@@ -200,10 +201,11 @@ int wpp::WatchPage::Load(const char *path)
             const char * itemsPath = graphic_item.attribute(_PATH_).value();
             const char * periodIso = graphic_item.attribute(_PERIOD_).value();
             long periodSeconds = ParseDurationSeconds(periodIso, 5);
+            int scrollSpeed = ParseInt(graphic_item.attribute(_SCROLL_SPEED_).value(), 0);
 
             FlipGraphic * flip = new FlipGraphic(context, fontName, color, x, y, flip_width, flip_height,
                                                   letter_spacing, line_offset, wrap, overflow,
-                                                  itemsPath, periodSeconds);
+                                                  itemsPath, periodSeconds, scrollSpeed);
             graphic = flip;
             flipUpdates.push_back(flip);
 

@@ -1,6 +1,7 @@
 #include "graphics.h"
 #include "graphics_context.h"
 #include "model.h"
+#include <algorithm>
 #include <cstdio>
 #include <map>
 #include <iostream>
@@ -126,7 +127,9 @@ wpp::TextGraphic::TextGraphic(
     letterSpacing(letterSpacing),
     lineOffset(lineOffset),
     wrap(wrap),
-    overflow(overflow)
+    overflow(overflow),
+    scrollOffsetY(0),
+    lastContentHeight(0)
 {}
 
 wpp::TextSpan &wpp::TextGraphic::AppendText(const char *text) {
@@ -143,7 +146,9 @@ wpp::TextSpan &wpp::TextGraphic::AppendText(const char *text) {
 
 void wpp::TextGraphic::Draw()
 {
-    context->DrawText(firstSpan, fontName.c_str(), color, x, y, width, height, letterSpacing, lineOffset, wrap, overflow);
+    lastContentHeight = context->DrawText(
+        firstSpan, fontName.c_str(), color, x, y, width, height,
+        letterSpacing, lineOffset, wrap, overflow, scrollOffsetY);
 }
 
 wpp::TextGraphic::~TextGraphic() {
@@ -218,14 +223,18 @@ wpp::FlipGraphic::FlipGraphic(
     Wrap wrap,
     Overflow overflow,
     const char *itemsPath,
-    long periodSeconds
+    long periodSeconds,
+    int scrollSpeedPxPerSec
 ) : Graphic(context),
     inner(new TextGraphic(context, fontName, color, x, y, width, height, letterSpacing, lineOffset, wrap, overflow)),
     itemsPath(itemsPath),
     periodSeconds(periodSeconds),
     currentIndex(0),
     lastFlipTime(0),
-    hasFlippedOnce(false)
+    hasFlippedOnce(false),
+    height(height),
+    scrollSpeedPxPerSec(scrollSpeedPxPerSec),
+    scrollOffsetPx(0)
 {}
 
 wpp::FlipGraphic::~FlipGraphic() {
@@ -254,15 +263,31 @@ void wpp::FlipGraphic::Update(const Model &model, long now, long deltaSeconds) {
         currentIndex = 0;  // items array shrank out from under us
     }
 
+    bool advanced = false;
     if (!hasFlippedOnce) {
         // Show the first item immediately rather than waiting a full
         // period before anything appears.
         lastFlipTime = now;
         hasFlippedOnce = true;
+        advanced = true;
     } else if (now - lastFlipTime >= periodSeconds) {
         currentIndex = (currentIndex + 1) % itemCount;
         lastFlipTime = now;
+        advanced = true;
     }
+
+    // Reset the scroll to the top on every new item so each one gets read
+    // from the start; otherwise, if this item's content exceeds the box,
+    // creep it upward at scrollSpeedPxPerSec and stop once fully revealed
+    // (no looping) -- matches how much of it was actually visible on the
+    // most recent Draw() (see TextGraphic::LastContentHeight).
+    if (advanced) {
+        scrollOffsetPx = 0;
+    } else if (scrollSpeedPxPerSec > 0) {
+        const int maxScroll = std::max(0, inner->LastContentHeight() - height);
+        scrollOffsetPx = std::min(maxScroll, scrollOffsetPx + static_cast<int>(scrollSpeedPxPerSec * deltaSeconds));
+    }
+    inner->SetScrollOffset(scrollOffsetPx);
 
     const std::string scopedBase = itemsPath + "/" + std::to_string(currentIndex);
     ScopedModel scoped(model, scopedBase);
