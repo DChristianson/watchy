@@ -252,3 +252,7 @@ void wpp::GraphicsContext::DrawImage(
         }
     }
 }
+
+void wpp::GraphicsContext::SetPixel(int x, int y, Color color) {
+    raster->SetPixel(x, y, color);
+}

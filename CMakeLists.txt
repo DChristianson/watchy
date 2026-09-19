@@ -38,6 +38,8 @@ add_library(watchpanel_lib
   libs/watchpanel/src/model.cc
   libs/watchpanel/src/graphics.cc
   libs/watchpanel/src/graphics_context.cc
+  libs/watchpanel/src/pixel_buffer.cc
+  libs/watchpanel/src/transition.cc
   libs/watchpanel/src/raster.cc
   libs/watchpanel/src/iso_duration.cc
   libs/watchpanel/src/rss.cc
@@ -194,3 +196,11 @@ target_link_libraries(rss_test PRIVATE watchpanel_lib)
 
 add_test(NAME rss_test COMMAND rss_test)
 set_tests_properties(rss_test PROPERTIES WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+
+add_executable(transition_test
+  tests/transition_test.cc
+)
+target_link_libraries(transition_test PRIVATE watchpanel_lib)
+
+add_test(NAME transition_test COMMAND transition_test)
+set_tests_properties(transition_test PROPERTIES WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")

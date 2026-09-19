@@ -64,6 +64,13 @@ namespace watchpanel {
             const char *href,
             long maxAgeSeconds = 24 * 60 * 60);
 
+        // Direct single-pixel write, bypassing all layout reasoning --
+        // e.g. FadeTransitionGraphic uses this to composite two off-screen
+        // renders into this context's raster. Kept on GraphicsContext
+        // (rather than exposing the raw Raster*) so it stays the only
+        // thing any Graphic ever touches.
+        void SetPixel(int x, int y, Color color);
+
     private:
 
         Raster *raster;

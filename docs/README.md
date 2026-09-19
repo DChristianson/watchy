@@ -90,6 +90,27 @@ content:
 - The first item shows immediately; if the array shrinks so the current index is out of range, it clamps back to item 0 rather than erroring.
 - `scroll-speed` (optional, default 0/off, pixels per second): when an item's rendered text is taller than the flip's `height`, it scrolls upward at this speed instead of clipping the overflow, stopping once fully revealed (it doesn't loop). Each new item starts scrolled back to the top.
 
+## Fade transitions
+`FadeTransitionGraphic` (`libs/watchpanel/include/watchpanel/transition.h`) is
+a generic graphic that shows one child, holds it, then does a true per-pixel
+cross-fade into a second child, and stays on the second one afterward — a
+one-shot hand-off, not a loop. It isn't wired into page XML yet (no `<fade>`
+element); it's a standalone building block for now.
+
+Since a real cross-fade needs both sides' actual colors at once, and a
+`Raster` is write-only, `FadeTransitionGraphic` owns two off-screen
+`PixelBuffer`s (one per side) with their own `GraphicsContext`s — child
+graphics must be constructed against `FromContext()`/`ToContext()`, not the
+page's real context, so their `Draw()` renders into the off-screen buffers
+that get blended into the real one:
+
+```cpp
+FadeTransitionGraphic transition(context, x, y, width, height,
+                                  holdSeconds, fadeSeconds, fontPath, cacheDir);
+transition.SetFromGraphic(new TextGraphic(transition.FromContext(), ...));
+transition.SetToGraphic(new TextGraphic(transition.ToContext(), ...));
+```
+
 ## Fetch caching
 All remote fetches (JSON feeds and images) go through `hamper`'s local
 cache (`cache/` at the repo root by default — configurable via the
