@@ -160,6 +160,24 @@ wpp::TextGraphic::~TextGraphic() {
     }
 }
 
+wpp::GroupGraphic::GroupGraphic(GraphicsContext *context) : Graphic(context) {}
+
+wpp::GroupGraphic::~GroupGraphic() {
+    for (auto c : children) {
+        delete c;
+    }
+}
+
+void wpp::GroupGraphic::AddChild(Graphic *child) {
+    children.push_back(child);
+}
+
+void wpp::GroupGraphic::Draw() {
+    for (auto c : children) {
+        c->Draw();
+    }
+}
+
 wpp::ImageGraphic::ImageGraphic(
     GraphicsContext * context,
     int x,

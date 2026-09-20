@@ -204,3 +204,11 @@ target_link_libraries(transition_test PRIVATE watchpanel_lib)
 
 add_test(NAME transition_test COMMAND transition_test)
 set_tests_properties(transition_test PROPERTIES WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")
+
+add_executable(attribution_test
+  tests/attribution_test.cc
+)
+target_link_libraries(attribution_test PRIVATE watchpanel_lib)
+
+add_test(NAME attribution_test COMMAND attribution_test)
+set_tests_properties(attribution_test PROPERTIES WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}")

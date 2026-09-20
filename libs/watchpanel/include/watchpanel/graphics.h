@@ -115,6 +115,24 @@ namespace watchpanel {
 
     };
 
+    // Draws a fixed set of child graphics in sequence -- e.g. wrapping an
+    // entire page's display list as one Graphic so FadeTransitionGraphic
+    // can treat it as a single "to" side to fade into. Owns its children.
+    class GroupGraphic : public Graphic {
+    private:
+
+        std::vector<Graphic *> children;
+
+    public:
+
+        GroupGraphic(GraphicsContext * context);
+        ~GroupGraphic();
+
+        void AddChild(Graphic *child);
+        void Draw();
+
+    };
+
     class RectGraphic: public Graphic {
     private:
 

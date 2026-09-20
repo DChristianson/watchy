@@ -19,6 +19,14 @@ namespace watchpanel {
         explicit GraphicsContext(Raster *raster, const std::string &fontPath = "fonts/tom-thumb.bdf",
                                   const std::string &cacheDir = "cache");
 
+        // The underlying raster's dimensions and this context's font --
+        // e.g. FadeTransitionGraphic uses these to size an off-screen
+        // buffer that matches the real target and renders through the
+        // same font.
+        int Width() const { return raster->Width(); }
+        int Height() const { return raster->Height(); }
+        const std::string &FontPath() const { return fontPath; }
+
         // Returns the total pixel height of the laid-out text (line count *
         // line spacing), regardless of how much of it actually fit in the
         // box -- callers (e.g. FlipGraphic) use this to detect when content

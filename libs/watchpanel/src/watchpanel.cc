@@ -35,6 +35,9 @@ namespace watchpanel {
     const char * _PATH_ = "path";
     const char * _PERIOD_ = "period";
     const char * _SCROLL_SPEED_ = "scroll-speed";
+    const char * _ATTRIBUTION_ = "attribution";
+    const char * _HOLD_ = "hold";
+    const char * _FADE_ = "fade";
 
     int ParseInt(const char * str, int defaultValue = 0) {
         return atoi(str);
@@ -58,7 +61,7 @@ wpp::WatchPage::WatchPage(GraphicsContext *context,
                           const std::string &configPath,
                           const std::string &secretsPath,
                           const std::string &cacheDir)
-    : context(context), configPath(configPath), secretsPath(secretsPath), cacheDir(cacheDir) {}
+    : pageTransition(nullptr), context(context), configPath(configPath), secretsPath(secretsPath), cacheDir(cacheDir) {}
 
 int wpp::WatchPage::Load(const char *path)
 {
@@ -111,6 +114,52 @@ int wpp::WatchPage::Load(const char *path)
         }
     }
 
+    // Optional <attribution>: shown on load, then true-cross-fades into the
+    // rest of the display list. When present, every display-list graphic
+    // below is built against pageTransition->ToContext() (an off-screen
+    // buffer) instead of the real context directly, and gets wrapped in a
+    // GroupGraphic as the transition's "to" side once the loop is done.
+    GraphicsContext * drawContext = context;
+    pugi::xml_node attribution = page.child(_ATTRIBUTION_);
+    if (attribution) {
+        long holdSeconds = ParseDurationSeconds(attribution.attribute(_HOLD_).value(), 3);
+        long fadeSeconds = ParseDurationSeconds(attribution.attribute(_FADE_).value(), 2);
+
+        pageTransition = new FadeTransitionGraphic(context, 0, 0, context->Width(), context->Height(),
+                                                    holdSeconds, fadeSeconds, context->FontPath(), cacheDir);
+        drawContext = pageTransition->ToContext();
+
+        const char * fontName = attribution.attribute(_FONT_).value();
+        const char * colorName = attribution.attribute(_COLOR_).value();
+        Color color = Color::Parse(colorName);
+        int x = ParseInt(attribution.attribute(_X_).value());
+        int y = ParseInt(attribution.attribute(_Y_).value());
+        int width = ParseInt(attribution.attribute(_WIDTH_).value());
+        int height = ParseInt(attribution.attribute(_HEIGHT_).value());
+        int letter_spacing = ParseInt(attribution.attribute(_LETTER_SPACING_).value(), 1);
+        int line_offset = ParseInt(attribution.attribute(_LINE_OFFSET_).value(), 0);
+        const char * wrapName = attribution.attribute(_WRAP_).value();
+        Wrap wrap = (strcmp(wrapName, "word") == 0) ? Wrap::kWord : Wrap::kNone;
+        const char * overflowName = attribution.attribute(_OVERFLOW_).value();
+        Overflow overflow = (strcmp(overflowName, "clip") == 0) ? Overflow::kClip : Overflow::kVisible;
+
+        TextGraphic * attributionText = new TextGraphic(pageTransition->FromContext(), fontName, color,
+                                                          x, y, width, height, letter_spacing, line_offset,
+                                                          wrap, overflow);
+        pugi::xml_node span = attribution.child("tspan");
+        if (span) {
+            while (span) {
+                const char * text = span.child_value();
+                LoadText(text, attributionText);
+                span = span.next_sibling("tspan");
+            }
+        } else {
+            const char * text = attribution.child_value();
+            LoadText(text, attributionText);
+        }
+        pageTransition->SetFromGraphic(attributionText);
+    }
+
     // display list
     pugi::xml_node display = page.child(_DISPLAY_);
     for (pugi::xml_node graphic_item = display.first_child(); graphic_item; graphic_item = graphic_item.next_sibling())
@@ -133,7 +182,7 @@ int wpp::WatchPage::Load(const char *path)
             const char * overflowName = graphic_item.attribute(_OVERFLOW_).value();
             Overflow overflow = (strcmp(overflowName, "clip") == 0) ? Overflow::kClip : Overflow::kVisible;
 
-            graphic = new TextGraphic(context, fontName, color, x, y, text_width, text_height,
+            graphic = new TextGraphic(drawContext, fontName, color, x, y, text_width, text_height,
                                        letter_spacing, line_offset, wrap, overflow);
 
             pugi::xml_node span = graphic_item.child("tspan");
@@ -158,7 +207,7 @@ int wpp::WatchPage::Load(const char *path)
             const char * href = graphic_item.attribute(_HREF_).value();
             const char * ttl = graphic_item.attribute(_TTL_).value();
             long imageMaxAgeSeconds = ParseDurationSeconds(ttl, 24 * 60 * 60);
-            graphic = new ImageGraphic(context, x, y, width, height, href, imageMaxAgeSeconds);
+            graphic = new ImageGraphic(drawContext, x, y, width, height, href, imageMaxAgeSeconds);
             if (FormattedString::IsTemplatized(href)) {
                 updateList.push_back(
                     new UpdateFormattedString(
@@ -179,7 +228,7 @@ int wpp::WatchPage::Load(const char *path)
             const char * strokeName = graphic_item.attribute(_STROKE_).value();
             Color stroke = Color::Parse(strokeName);
 
-            graphic = new RectGraphic(context, x, y, width, height, fill, stroke);
+            graphic = new RectGraphic(drawContext, x, y, width, height, fill, stroke);
 
         } else if (strcmp(name, _FLIP_) == 0) {
             // FLIP graphic: cycles through the elements of the array at
@@ -203,7 +252,7 @@ int wpp::WatchPage::Load(const char *path)
             long periodSeconds = ParseDurationSeconds(periodIso, 5);
             int scrollSpeed = ParseInt(graphic_item.attribute(_SCROLL_SPEED_).value(), 0);
 
-            FlipGraphic * flip = new FlipGraphic(context, fontName, color, x, y, flip_width, flip_height,
+            FlipGraphic * flip = new FlipGraphic(drawContext, fontName, color, x, y, flip_width, flip_height,
                                                   letter_spacing, line_offset, wrap, overflow,
                                                   itemsPath, periodSeconds, scrollSpeed);
             graphic = flip;
@@ -230,6 +279,17 @@ int wpp::WatchPage::Load(const char *path)
             displayList.push_back(graphic);
         }
     }
+
+    if (pageTransition) {
+        // Ownership of everything in displayList moves to this group (and
+        // from there, to pageTransition) -- see Clear().
+        GroupGraphic * group = new GroupGraphic(drawContext);
+        for (auto g : displayList) {
+            group->AddChild(g);
+        }
+        pageTransition->SetToGraphic(group);
+    }
+
     return 0;
 }
 
@@ -263,10 +323,21 @@ void wpp::WatchPage::Update(long now, long deltaSeconds) {
         f->Update(model, now, deltaSeconds);
     }
 
+    // Drives only the attribution fade's own clock -- the display list's
+    // own dynamic content is already covered by updateList/flipUpdates
+    // above, regardless of which context it was built against.
+    if (pageTransition) {
+        pageTransition->Update(model, now, deltaSeconds);
+    }
+
 }
 
 void wpp::WatchPage::Draw()
 {
+    if (pageTransition) {
+        pageTransition->Draw();
+        return;
+    }
     for (auto g : displayList)
     {
         std::cout << "drawing graphic" << std::endl;
@@ -287,9 +358,17 @@ void wpp::WatchPage::Clear() {
     }
     updateList.clear();
 
-    for (auto g : displayList)
-    {
-        delete g;
+    if (pageTransition) {
+        // Owns the attribution graphic and, via its GroupGraphic "to"
+        // side, every displayList entry too -- displayList itself is a
+        // non-owning alias list in this case (see the field comment).
+        delete pageTransition;
+        pageTransition = nullptr;
+    } else {
+        for (auto g : displayList)
+        {
+            delete g;
+        }
     }
     displayList.clear();
 

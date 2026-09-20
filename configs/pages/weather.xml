@@ -1,4 +1,7 @@
 <page>
+    <attribution hold="PT3S" fade="PT2S" font="tom-thumb" color="white" x="0" y="0" width="64" height="64" wrap="word">
+        <tspan>Icons: OpenWeatherMap</tspan>
+    </attribution>
     <data>
         <feed name="weather" href="https://api.openweathermap.org/data/2.5/weather?q={/config/openweather/city},{/config/openweather/state_code},{/config/openweather/country_code}&units={/config/openweather/units}&appid={/secrets/openweather_appid}"/>
     </data>

@@ -3,6 +3,7 @@
 
 #include "graphics_context.h"
 #include "data.h"
+#include "transition.h"
 #include "update.h"
 
 #include <string>
@@ -12,7 +13,7 @@ namespace watchpanel {
 
     class WatchPage {
     private:
-    
+
         std::vector<std::string> errors;
 
         std::vector<DataImport *> dataList;
@@ -22,6 +23,14 @@ namespace watchpanel {
         // which are also Updateable) -- displayList's Clear() owns and
         // deletes the actual objects.
         std::vector<Updateable *> flipUpdates;
+
+        // Set only when the page has an <attribution>: the whole display
+        // list is then built against pageTransition->ToContext() instead
+        // of context directly and wrapped in a GroupGraphic as its "to"
+        // side, so displayList becomes a non-owning alias list too (see
+        // Clear()) and Draw()/Update() defer to pageTransition instead of
+        // walking displayList themselves.
+        FadeTransitionGraphic *pageTransition;
 
         GraphicsContext *context;
         std::string configPath;
