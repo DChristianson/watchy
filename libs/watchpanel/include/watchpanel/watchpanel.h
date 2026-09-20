@@ -64,10 +64,8 @@ namespace watchpanel {
         std::string secretsPath;
         std::string cacheDir;
         int currentPage;
-        long lastUpdate;
         long lastPageFlip;
         long pageInterval;
-        long updateInterval;
 
     public:
 

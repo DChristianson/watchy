@@ -391,10 +391,8 @@ wpp::WatchPanel::WatchPanel(GraphicsContext *context,
       secretsPath(secretsPath),
       cacheDir(cacheDir),
       currentPage(0),
-      lastUpdate(0),
       lastPageFlip(0),
-      pageInterval(10),
-      updateInterval(60) {
+      pageInterval(10) {
 }
 
 wpp::WatchPanel::~WatchPanel() {
@@ -417,7 +415,6 @@ void wpp::WatchPanel::Clear() {
     }
     pageList.clear();
     currentPage = 0;
-    lastUpdate = 0;
     lastPageFlip = 0;
 }
 
@@ -426,10 +423,14 @@ void wpp::WatchPanel::Update(long now, long deltaSeconds) {
         return;
     }
 
-    if (lastUpdate == 0 || now - lastUpdate >= updateInterval) {
-        pageList[currentPage]->Update(now, deltaSeconds);
-        lastUpdate = now;
-    }
+    // Every tick, not throttled: each DataImport already throttles its own
+    // real work against `now` (hamper's ttl/maxAgeSeconds cache for feeds
+    // and images), and FlipGraphic/FadeTransitionGraphic need Update()
+    // called on every tick to advance their own timers smoothly -- an
+    // outer gate here previously starved both of real deltaSeconds,
+    // silently breaking flip timing and making fades jump instead of
+    // animate.
+    pageList[currentPage]->Update(now, deltaSeconds);
 
     if (pageList.size() > 1 && (lastPageFlip == 0 || now - lastPageFlip >= pageInterval)) {
         currentPage = (currentPage + 1) % static_cast<int>(pageList.size());
