@@ -111,7 +111,7 @@ if(WATCHY_ENABLE_RGB_MATRIX)
   find_library(RGB_MATRIX_LIBRARY NAMES rgbmatrix PATHS "${RGB_MATRIX_ROOT}/lib")
   if(NOT RGB_MATRIX_INCLUDE_DIR OR NOT RGB_MATRIX_LIBRARY)
     message(FATAL_ERROR "WATCHY_ENABLE_RGB_MATRIX is ON but rpi-rgb-led-matrix wasn't found under "
-                         "${RGB_MATRIX_ROOT}. Build it first (see docs/README.md), or set "
+                         "${RGB_MATRIX_ROOT}. Build it first (see README.md), or set "
                          "-DRGB_MATRIX_ROOT=/path/to/checkout.")
   endif()
   target_compile_definitions(clock-led PRIVATE WATCHY_RGB_MATRIX)
